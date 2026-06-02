@@ -1,0 +1,153 @@
+import { describe, expect, it } from "vitest";
+import { createHostedAuthRouteHandlers, createHostedAuthService, createMemoryAuthStore } from "./index";
+
+function createService() {
+  return createHostedAuthService({
+    applications: [
+      {
+        allowedRedirectURIs: ["https://app.example.com/"],
+        clientId: "workspace-app",
+        name: "Workspace App",
+        redirectURI: "https://app.example.com/",
+      },
+    ],
+    authBaseURL: "https://auth.example.com",
+    github: {
+      clientId: "github-client-id",
+      clientSecret: "github-client-secret",
+    },
+    sessionSecret: "test-secret",
+  });
+}
+
+describe("hosted auth service", () => {
+  it("renders GitHub as a hosted login provider when configured", async () => {
+    const response = await createService().handleLogin(
+      new Request("https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("Workspace App 统一登录");
+    expect(body).toContain("<span class=\"provider-name\">GitHub</span>");
+    expect(body).toContain("首次使用会自动完成账号创建和身份绑定");
+    expect(body).not.toContain("mode-tab");
+    expect(body).not.toContain("去注册");
+    expect(body).toContain(
+      "https://auth.example.com/api/auth/github/start?client_id=workspace-app&amp;redirect_uri=https%3A%2F%2Fapp.example.com%2F",
+    );
+  });
+
+  it("treats old registration mode links as the same hosted login page", async () => {
+    const response = await createService().handleLogin(
+      new Request("https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F&mode=register"),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("Workspace App 统一登录");
+    expect(body).toContain("<span class=\"provider-name\">GitHub</span>");
+    expect(body).not.toContain("创建 Workspace App 账号");
+    expect(body).not.toContain("mode-tab");
+    expect(body).not.toContain("provider-note");
+  });
+
+  it("starts the GitHub OAuth web application flow", async () => {
+    const response = await createService().handleGitHubStart(
+      new Request("https://auth.example.com/api/auth/github/start?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const location = response.headers.get("location");
+    const redirectURL = new URL(location ?? "");
+
+    expect(response.status).toBe(302);
+    expect(redirectURL.origin + redirectURL.pathname).toBe("https://github.com/login/oauth/authorize");
+    expect(redirectURL.searchParams.get("client_id")).toBe("github-client-id");
+    expect(redirectURL.searchParams.get("redirect_uri")).toBe("https://auth.example.com/api/auth/github/callback");
+    expect(redirectURL.searchParams.get("scope")).toBe("read:user user:email");
+    expect(response.headers.get("set-cookie")).toContain("unified_auth_state=");
+  });
+
+  it("dispatches embedded business app routes", async () => {
+    const handlers = createHostedAuthRouteHandlers({
+      applications: [
+        {
+          allowedRedirectURIs: ["http://localhost:3004/"],
+          clientId: "ai-pm",
+          name: "AI PM",
+          redirectURI: "http://localhost:3004/",
+        },
+      ],
+      authBaseURL: "http://localhost:3004",
+      github: {
+        clientId: "github-client-id",
+        clientSecret: "github-client-secret",
+      },
+      sessionSecret: "test-secret",
+      store: createMemoryAuthStore(),
+    });
+    const loginResponse = await handlers.GET(
+      new Request("http://localhost:3004/login?client_id=ai-pm&redirect_uri=http%3A%2F%2Flocalhost%3A3004%2F"),
+    );
+    const body = await loginResponse.text();
+    const startResponse = await handlers.GET(
+      new Request("http://localhost:3004/api/auth/github/start?client_id=ai-pm&redirect_uri=http%3A%2F%2Flocalhost%3A3004%2F"),
+    );
+
+    expect(body).toContain("AI PM 统一登录");
+    expect(body).toContain("http://localhost:3004/api/auth/github/start");
+    expect(startResponse.headers.get("location")).toContain(
+      "redirect_uri=http%3A%2F%2Flocalhost%3A3004%2Fapi%2Fauth%2Fgithub%2Fcallback",
+    );
+  });
+
+  it("persists hosted sessions with a canonical auth user id", async () => {
+    const service = createHostedAuthService({
+      applications: [
+        {
+          allowedRedirectURIs: ["https://app.example.com/"],
+          clientId: "workspace-app",
+          redirectURI: "https://app.example.com/",
+        },
+      ],
+      allowDevLogin: true,
+      authBaseURL: "https://auth.example.com",
+      sessionSecret: "test-secret",
+      store: createMemoryAuthStore(),
+    });
+    const loginResponse = await service.handleDevLogin(
+      new Request("https://auth.example.com/api/auth/dev-login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const cookie = loginResponse.headers.get("set-cookie")?.match(/unified_auth_session=[^;]+/)?.[0] ?? "";
+    const contextResponse = await service.handleContext(
+      new Request("https://auth.example.com/api/auth/context", {
+        headers: { cookie },
+      }),
+    );
+    const context = await contextResponse.json();
+
+    expect(context.user.id).toMatch(/^auth_/);
+    expect(context.user.id).not.toBe("dev-user");
+    expect(context.user.metadata.provider).toBe("dev");
+    expect(context.user.metadata.providerUserId).toBe("dev-user");
+    expect(context.user.metadata.registrationChannel).toBe("dev");
+    expect(context.session.userId).toBe(context.user.id);
+  });
+
+  it("binds OAuth accounts with the same email to the first auth user", async () => {
+    const store = createMemoryAuthStore();
+    const googleUser = await store.upsertOAuthUser("google", {
+      email: "person@example.com",
+      id: "google-sub-1",
+      metadata: { provider: "google" },
+      name: "Google Person",
+    });
+    const githubUser = await store.upsertOAuthUser("github", {
+      email: "PERSON@example.com",
+      id: "github:42",
+      metadata: { provider: "github" },
+      name: "github-person",
+    });
+
+    expect(githubUser.id).toBe(googleUser.id);
+    expect(githubUser.metadata?.provider).toBe("github");
+    expect(githubUser.metadata?.registrationChannel).toBe("google");
+  });
+});

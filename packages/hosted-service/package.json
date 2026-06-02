@@ -1,0 +1,39 @@
+{
+  "name": "@rc-tool/unified-auth-hosted-service",
+  "version": "0.2.1",
+  "type": "module",
+  "description": "Embedded and standalone hosted auth runtime for Unified Auth.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "unified-auth": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/hosted-service-node.d.ts",
+      "import": "./dist/hosted-service-node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "pnpm clean && tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "dev:service": "pnpm build && node dist/hosted-service-cli.js",
+    "test": "vitest run --config ../../vitest.config.ts src/*.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@rc-tool/unified-auth-sdk": "workspace:^0.2.1",
+    "dotenv": "^17.4.2"
+  }
+}
