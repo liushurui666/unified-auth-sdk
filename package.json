@@ -1,0 +1,26 @@
+{
+  "name": "unified-auth-workspace",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.4.0",
+  "scripts": {
+    "build": "pnpm --filter @rc-tool/unified-auth-sdk build && pnpm --filter @rc-tool/unified-auth-hosted-service build && pnpm --filter @rc-tool/unified-auth-prisma-store build",
+    "clean": "pnpm -r clean",
+    "db:generate": "pnpm --filter @rc-tool/unified-auth-prisma-store db:generate",
+    "prepack": "pnpm build",
+    "publish:packages": "pnpm build && pnpm -r --filter './packages/*' publish --access public --no-git-checks",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm build"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.14",
+    "better-auth": "^1.6.10",
+    "drizzle-orm": "^0.45.2",
+    "prisma": "^7.8.0",
+    "react": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7"
+  }
+}

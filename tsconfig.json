@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/sdk" },
+    { "path": "./packages/hosted-service" },
+    { "path": "./packages/prisma-store" }
+  ]
+}

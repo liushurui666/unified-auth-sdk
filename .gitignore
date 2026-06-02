@@ -1,0 +1,17 @@
+node_modules
+dist
+*.tsbuildinfo
+
+# 本地认证运行数据和调试产物不能进入仓库。
+.auth
+.env
+.env.*
+!.env.example
+.playwright-mcp
+
+# 根目录这些是拆包前的旧实现或本地生成物，正式源码以 packages/* 为准。
+/src/
+/prisma/
+/prisma.config.ts
+packages/*/prisma/generated/
+.DS_Store
