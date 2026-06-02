@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// 认证用户表，只保存跨业务系统复用的身份信息，不保存业务角色或项目权限。
+model HostedAuthUser {
+  id                  String  @id @db.VarChar(64)
+  name                String? @db.VarChar(191)
+  email               String? @unique @db.VarChar(320)
+  avatarUrl           String? @db.VarChar(1024)
+  registrationChannel String  @db.VarChar(32)
+  metadata            Json
+  createdAt           DateTime @default(now()) @db.Timestamp(3)
+  updatedAt           DateTime @updatedAt @db.Timestamp(3)
+
+  accounts HostedAuthAccount[]
+  sessions HostedAuthSession[]
+
+  @@map("auth_users")
+}
+
+/// OAuth 账号绑定表，同一个认证用户可以绑定飞书、Google、GitHub 等多个 provider。
+model HostedAuthAccount {
+  id                String   @id @db.VarChar(64)
+  provider          String   @db.VarChar(32)
+  providerAccountId String   @db.VarChar(191)
+  userId            String   @db.VarChar(64)
+  email             String?  @db.VarChar(320)
+  metadata          Json
+  lastLoginAt       DateTime @default(now()) @db.Timestamp(3)
+  createdAt         DateTime @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime @updatedAt @db.Timestamp(3)
+
+  user HostedAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("auth_accounts")
+}
+
+/// Hosted Auth session 表，cookie 中只保存签名 session id，完整状态在这里查询。
+model HostedAuthSession {
+  id                String   @id @db.VarChar(64)
+  clientId          String   @db.VarChar(191)
+  userId            String   @db.VarChar(64)
+  provider          String   @db.VarChar(32)
+  providerAccountId String   @db.VarChar(191)
+  expiresAt         DateTime @db.Timestamp(3)
+  createdAt         DateTime @default(now()) @db.Timestamp(3)
+  updatedAt         DateTime @updatedAt @db.Timestamp(3)
+
+  user HostedAuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
