@@ -1,0 +1,178 @@
+import type { GenericOAuthConfig } from "better-auth/plugins";
+
+function pickFirstNonEmpty(...values: (string | undefined)[]): string | undefined {
+  return values.find((v) => typeof v === "string" && v.length > 0);
+}
+
+interface FeishuTokenResponse {
+  code?: number;
+  msg?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  refresh_token_expires_in?: number;
+  token_type?: string;
+  scope?: string;
+}
+
+interface FeishuUserInfoResponse {
+  code: number;
+  msg: string;
+  data?: {
+    open_id: string;
+    union_id?: string;
+    user_id?: string;
+    tenant_key?: string;
+    name?: string;
+    en_name?: string;
+    email?: string;
+    enterprise_email?: string;
+    mobile?: string;
+    avatar_url?: string;
+  };
+}
+
+interface FeishuTenantTokenResponse {
+  code: number;
+  msg: string;
+  tenant_access_token?: string;
+  expire?: number;
+}
+
+interface FeishuTenantQueryResponse {
+  code: number;
+  msg: string;
+  data?: {
+    tenant?: {
+      name?: string;
+      display_id?: string;
+      tenant_tag?: number;
+      tenant_key?: string;
+      avatar?: Record<string, string>;
+    };
+  };
+}
+
+const tenantTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+async function fetchFeishuTenantToken(appId: string, appSecret: string): Promise<string | null> {
+  const now = Date.now();
+  const cached = tenantTokenCache.get(appId);
+  if (cached && cached.expiresAt > now + 60_000) {
+    return cached.token;
+  }
+  const res = await fetch("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal", {
+    body: JSON.stringify({
+      app_id: appId,
+      app_secret: appSecret,
+    }),
+    headers: { "content-type": "application/json; charset=utf-8" },
+    method: "POST",
+  });
+  const json = (await res.json()) as FeishuTenantTokenResponse;
+  if (json.code !== 0 || !json.tenant_access_token) {
+    return null;
+  }
+  tenantTokenCache.set(appId, {
+    expiresAt: now + (json.expire ?? 7200) * 1000,
+    token: json.tenant_access_token,
+  });
+  return json.tenant_access_token;
+}
+
+async function fetchFeishuOrganizationName(
+  appId: string,
+  appSecret: string,
+): Promise<string | null> {
+  try {
+    const token = await fetchFeishuTenantToken(appId, appSecret);
+    if (!token) {
+      return null;
+    }
+    const res = await fetch("https://open.feishu.cn/open-apis/tenant/v2/tenant/query", {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const json = (await res.json()) as FeishuTenantQueryResponse;
+    if (json.code !== 0) {
+      return null;
+    }
+    return json.data?.tenant?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export interface FeishuOAuthProviderOptions {
+  appId: string;
+  appSecret: string;
+  providerId: string;
+}
+
+export function buildFeishuOAuthProvider(opts: FeishuOAuthProviderOptions): GenericOAuthConfig {
+  const { appId, appSecret, providerId } = opts;
+  return {
+    authorizationUrl: "https://accounts.feishu.cn/open-apis/authen/v1/authorize",
+    clientId: appId,
+    clientSecret: appSecret,
+    async getToken({ code, redirectURI }) {
+      const res = await fetch("https://open.feishu.cn/open-apis/authen/v2/oauth/token", {
+        body: JSON.stringify({
+          client_id: appId,
+          client_secret: appSecret,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: redirectURI,
+        }),
+        headers: { "content-type": "application/json; charset=utf-8" },
+        method: "POST",
+      });
+      const json = (await res.json()) as FeishuTokenResponse;
+      if (!res.ok || !json.access_token) {
+        throw new Error(
+          `Feishu token exchange failed: ${json.code ?? res.status} ${json.msg ?? ""}`,
+        );
+      }
+      return {
+        accessToken: json.access_token,
+        accessTokenExpiresAt: json.expires_in
+          ? new Date(Date.now() + json.expires_in * 1000)
+          : undefined,
+        raw: json as unknown as Record<string, unknown>,
+        refreshToken: json.refresh_token,
+        refreshTokenExpiresAt: json.refresh_token_expires_in
+          ? new Date(Date.now() + json.refresh_token_expires_in * 1000)
+          : undefined,
+        scopes: json.scope?.split(" ").filter(Boolean),
+        tokenType: json.token_type ?? "Bearer",
+      };
+    },
+    async getUserInfo(tokens) {
+      const [userInfoRes, organizationName] = await Promise.all([
+        fetch("https://open.feishu.cn/open-apis/authen/v1/user_info", {
+          headers: { authorization: `Bearer ${tokens.accessToken}` },
+        }),
+        fetchFeishuOrganizationName(appId, appSecret),
+      ]);
+      const json = (await userInfoRes.json()) as FeishuUserInfoResponse;
+      if (json.code !== 0 || !json.data) {
+        return null;
+      }
+      const { data } = json;
+      const email =
+        pickFirstNonEmpty(data.enterprise_email, data.email) ?? `${data.open_id}@feishu.local`;
+      const name = pickFirstNonEmpty(data.name, data.en_name) ?? data.open_id;
+      return {
+        email,
+        emailVerified: false,
+        feishuTenantKey: pickFirstNonEmpty(data.tenant_key),
+        feishuTenantName: organizationName ?? undefined,
+        id: data.open_id,
+        image: pickFirstNonEmpty(data.avatar_url),
+        name,
+      };
+    },
+    providerId,
+    scopes: ["contact:user.base:readonly", "contact:user.email:readonly"],
+    tokenUrl: "https://open.feishu.cn/open-apis/authen/v2/oauth/token",
+  };
+}
