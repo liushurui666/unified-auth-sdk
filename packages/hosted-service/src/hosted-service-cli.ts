@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadEnv, parse as parseEnv } from "dotenv";
 import { createHostedAuthNodeServer } from "./hosted-service-node.js";
-import { createFileAuthStore, createHostedAuthLoginPageComponent } from "./index.js";
+import { createFileAuthStore } from "./index.js";
 import type { HostedAuthStore } from "./index.js";
 
 const FEISHU_ENV_KEYS = ["FEISHU_APP_ID", "FEISHU_APP_SECRET", "FEISHU_REDIRECT_URI"] as const;
@@ -13,10 +13,6 @@ loadLegacyFeishuEnv();
 
 function readEnv(name: string, fallback = "") {
   return process.env[name]?.trim() || fallback;
-}
-
-function readOptionalEnv(name: string) {
-  return readEnv(name) || undefined;
 }
 
 const port = Number(readEnv("AUTH_SERVICE_PORT", readEnv("PORT", "3005")));
@@ -101,17 +97,6 @@ const server = createHostedAuthNodeServer({
     clientSecret: readEnv("GITHUB_CLIENT_SECRET") || undefined,
     redirectURI: readEnv("GITHUB_REDIRECT_URI") || undefined,
   },
-  loginPageComponent: createHostedAuthLoginPageComponent({
-    backgroundImageUrl: readOptionalEnv("AUTH_LOGIN_BACKGROUND_URL"),
-    brandLabel: readOptionalEnv("AUTH_LOGIN_BRAND_LABEL"),
-    brandName: readOptionalEnv("AUTH_LOGIN_BRAND_NAME"),
-    heroDescription: readOptionalEnv("AUTH_LOGIN_HERO_DESCRIPTION"),
-    heroTitle: readOptionalEnv("AUTH_LOGIN_HERO_TITLE"),
-    logoUrl: readOptionalEnv("AUTH_LOGIN_LOGO_URL"),
-    panelDescription: readOptionalEnv("AUTH_LOGIN_PANEL_DESCRIPTION"),
-    panelTitle: readOptionalEnv("AUTH_LOGIN_PANEL_TITLE"),
-    statusText: readOptionalEnv("AUTH_LOGIN_STATUS_TEXT"),
-  }),
   sessionSecret,
   store: await createAuthStore(),
 });

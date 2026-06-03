@@ -82,7 +82,6 @@ AUTH_SERVICE_URL=http://localhost:3004
 NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3004
 AUTH_CLIENT_ID=ai-pm
 NEXT_PUBLIC_AUTH_CLIENT_ID=ai-pm
-AUTH_LOGIN_BACKGROUND_URL=https://cdn.example.com/auth/login-bg.jpg
 AUTH_ALLOWED_REDIRECT_URI=http://localhost:3004/
 ```
 
@@ -143,7 +142,7 @@ Hosted Login 是 SDK 内部组件化渲染的黑盒页面。业务方不需要�
 import { createHostedAuthLoginPageComponent } from "@rc-tool/unified-auth-hosted-service";
 
 const LoginPage = createHostedAuthLoginPageComponent({
-  backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
   brandName: "AI 项目管理平台",
   heroTitle: "用企业账号安全登录",
   panelTitle: "飞书登录",
@@ -165,7 +164,7 @@ applications: [
     allowedRedirectURIs: [resolveRedirectURI()],
     clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
     loginPageComponent: createHostedAuthLoginPageComponent({
-      backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+      backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
       brandName: "AI 项目管理平台",
       heroTitle: "用企业账号安全登录",
       panelTitle: "飞书登录",
@@ -421,7 +420,7 @@ function resolveRedirectURI() {
 }
 
 const LoginPage = createHostedAuthLoginPageComponent({
-  backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
   brandName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
   heroTitle: "用飞书账号安全登录",
   panelTitle: "飞书登录",

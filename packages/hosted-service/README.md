@@ -20,7 +20,7 @@ import {
 } from "@rc-tool/unified-auth-hosted-service";
 
 const LoginPage = createHostedAuthLoginPageComponent({
-  backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
   brandName: "AI 项目管理平台",
   heroTitle: "用企业账号安全登录",
   panelTitle: "飞书登录",
@@ -173,14 +173,7 @@ applications: [
 
 旧的 `loginPage` 和 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐用 `loginPageComponent`。
 
-环境变量仍然可以作为配置来源，但不是必须。比如：
-
-```ts
-const LoginPage = createHostedAuthLoginPageComponent({
-  backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
-  heroTitle: process.env.AUTH_LOGIN_HERO_TITLE,
-});
-```
+独立 Auth Service 启动器不读取 `AUTH_LOGIN_*` 这类全局样式环境变量；共享一个 Auth Service 服务多个业务应用时，样式应该按 `clientId` 从应用配置入口读取，而不是为每套样式部署一套服务。
 
 也可以完全自定义组件，但组件只拿 SDK 生成好的 `model`，不需要接触 secret、state 签名、callback 或 session：
 
