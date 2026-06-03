@@ -118,6 +118,77 @@ pnpm dlx @rc-tool/unified-auth-hosted-service init --app ai-pm --redirect http:/
 pnpm dlx @rc-tool/unified-auth-hosted-service doctor
 ```
 
+## 配置信息说明
+
+这些配置都写在业务项目自己的 `.env.local` / `.env.example` 里。SDK 不会把 secret 写死进 npm 包，也不会要求业务方自己实现认证逻辑；CLI 只是帮业务项目把缺失变量补进去。
+
+### 业务应用配置
+
+| 环境变量 | 是否必填 | 作用 |
+| --- | --- | --- |
+| `AUTH_SERVICE_URL` | 必填 | 服务端访问 Auth Service 的地址。内嵌 Hosted Auth 时通常就是业务项目自己的 origin，例如 `http://localhost:3004`。 |
+| `NEXT_PUBLIC_AUTH_SERVICE_URL` | 前端需要生成登录地址时必填 | 浏览器侧生成登录/退出 URL 的 Auth Service 地址。内嵌模式也可以填 `http://localhost:3004`。 |
+| `AUTH_CLIENT_ID` | 必填 | 当前业务应用在 Auth Service 里的应用 id，例如 `ai-pm`。请求 `/api/auth/context` 时会带上 `client_id`。 |
+| `NEXT_PUBLIC_AUTH_CLIENT_ID` | 前端需要生成登录地址时必填 | 浏览器侧使用的 `clientId`，建议和 `AUTH_CLIENT_ID` 保持一致。 |
+| `AUTH_CLIENT_NAME` | 可选 | Hosted Login 页面展示的业务应用名称，例如 `AI PM`。 |
+| `AUTH_ALLOWED_REDIRECT_URI` | 必填 | 登录成功后允许回跳的地址，例如 `http://localhost:3004/`。 |
+
+### 登录页 UI 配置
+
+登录页 UI 配置只在安装并使用 `@rc-tool/unified-auth-hosted-service` 时生效。core SDK 只负责生成登录地址和读取认证上下文，不渲染登录页。
+
+| 环境变量 | 是否必填 | 作用 |
+| --- | --- | --- |
+| `AUTH_LOGIN_BACKGROUND_URL` | 可选 | Hosted Login 背景图地址。可以是 CDN 图片、业务项目 public 目录图片的绝对 URL，或任何浏览器可访问的图片 URL。 |
+
+不配置 `AUTH_LOGIN_BACKGROUND_URL` 时，Hosted Login 会使用 SDK 自带的默认背景图。配置后需要在 route handler 里传给 `applications[].appearance.backgroundImageUrl`：
+
+```ts
+applications: [
+  {
+    allowedRedirectURIs: [resolveRedirectURI()],
+    appearance: {
+      backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+    },
+    clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
+    name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
+    redirectURI: resolveRedirectURI(),
+  },
+],
+```
+
+如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `appearance.backgroundImageUrl`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌背景。
+
+### Session 和存储配置
+
+这些配置只在内嵌 Hosted Auth 时需要。原因是登录页和 `/api/auth/*` 路由跑在业务项目里，所以业务项目这个进程需要负责签发 cookie、保存认证 session，并在后续请求里读取当前用户。
+
+| 环境变量 | 是否必填 | 作用 |
+| --- | --- | --- |
+| `AUTH_SESSION_SECRET` | 必填 | session cookie 签名密钥。CLI 会自动生成随机值。 |
+| `AUTH_ALLOW_DEV_LOGIN` | 本地可选，生产建议显式配置 | 是否允许开发账号登录。本地可以是 `true`，生产必须设置为 `false`。 |
+| `AUTH_STORE_PROVIDER` | 可选 | 认证数据存储方式，默认 `file`。需要 PostgreSQL 时填 `prisma`。 |
+| `AUTH_STORE_FILE` | file store 时可选 | file store 的本地 JSON 文件路径，默认 `.auth/unified-auth-store.json`。 |
+| `AUTH_DATABASE_URL` | Prisma store 时必填 | 认证库 PostgreSQL 连接串，建议不要和业务项目自己的 `DATABASE_URL` 混用。 |
+
+### OAuth Provider 配置
+
+真实 OAuth 登录按需配置。没配置某个 provider 时，登录页会显示为不可用或跳过对应真实登录能力。
+
+| Provider | 环境变量 |
+| --- | --- |
+| 飞书 | `FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_REDIRECT_URI` |
+| Google | `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_REDIRECT_URI` |
+| GitHub | `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GITHUB_REDIRECT_URI` |
+
+OAuth callback 地址要和 provider 控制台里配置的回调地址完全一致。内嵌模式通常是：
+
+```dotenv
+FEISHU_REDIRECT_URI=http://localhost:3004/api/auth/feishu/callback
+GOOGLE_REDIRECT_URI=http://localhost:3004/api/auth/google/callback
+GITHUB_REDIRECT_URI=http://localhost:3004/api/auth/github/callback
+```
+
 ## 接入方式一：业务项目只消费 Auth Service
 
 适合 Auth Service 已经独立部署好的项目。业务项目只安装 `@rc-tool/unified-auth-sdk`。

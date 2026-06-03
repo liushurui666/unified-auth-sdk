@@ -94,7 +94,7 @@ const loginURL = auth.getLoginURL({
 
 ## 应用与外观配置
 
-登录页样式不建议从业务项目每次临时传入，而是由 Auth Service 根据 `clientId` 查询应用配置。
+core SDK 的应用配置用于描述业务应用身份和登录入口偏好；当前 Hosted Login 的真实背景图配置由 `@rc-tool/unified-auth-hosted-service` 的 `appearance.backgroundImageUrl` 控制。
 
 ```ts
 import type { AuthApplicationConfig } from "@rc-tool/unified-auth-sdk";
@@ -114,6 +114,25 @@ export const appConfig: AuthApplicationConfig = {
   },
 };
 ```
+
+如果业务项目使用内嵌 Hosted Auth，可以在环境变量里配置登录页背景图：
+
+```dotenv
+AUTH_LOGIN_BACKGROUND_URL=https://cdn.example.com/auth/login-bg.jpg
+```
+
+并传给 hosted-service：
+
+```ts
+createHostedAuthRouteHandlers({
+  appearance: {
+    backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+  },
+  // ...
+});
+```
+
+多个业务应用共用一套 Auth Service 时，也可以写到 `applications[].appearance.backgroundImageUrl`，按 `clientId` 分别展示不同背景图。
 
 ## 内嵌 Hosted Auth 路由
 

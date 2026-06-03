@@ -1,6 +1,6 @@
 {
   "name": "@rc-tool/unified-auth-sdk",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "type": "module",
   "description": "Lightweight client SDK for Unified Auth hosted services.",
   "main": "./dist/index.js",
