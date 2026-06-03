@@ -2,11 +2,40 @@ import type { HostedAuthStore } from "./store/index.js";
 
 export type HostedAuthLoginProviderId = "feishu" | "github" | "google";
 
+export interface HostedAuthLoginProviderView {
+  enabled: boolean;
+  href: string;
+  icon: string;
+  iconClassName: string;
+  id: HostedAuthLoginProviderId;
+  label: string;
+}
+
+export interface HostedAuthLoginPageModel {
+  allowDevLogin: boolean;
+  appName: string;
+  clientId: string;
+  devLoginHref: string;
+  error?: string;
+  providers: HostedAuthLoginProviderView[];
+  redirectURI: string;
+}
+
+export interface HostedAuthLoginPageProps {
+  config: HostedAuthLoginPageConfig;
+  model: HostedAuthLoginPageModel;
+}
+
+export type HostedAuthLoginPageComponent = ((props: HostedAuthLoginPageProps) => string) & {
+  defaultConfig?: HostedAuthLoginPageConfig;
+};
+
 export interface HostedAuthApplication {
   allowedRedirectURIs?: string[];
   appearance?: HostedAuthAppearance;
   clientId: string;
   loginPage?: HostedAuthLoginPageConfig;
+  loginPageComponent?: HostedAuthLoginPageComponent;
   name?: string;
   redirectURI?: string;
 }
@@ -64,6 +93,7 @@ export interface HostedAuthServiceOptions {
   github?: HostedGitHubConfig;
   google?: HostedGoogleConfig;
   loginPage?: HostedAuthLoginPageConfig;
+  loginPageComponent?: HostedAuthLoginPageComponent;
   sessionSecret: string;
   store?: HostedAuthStore;
 }

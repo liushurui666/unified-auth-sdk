@@ -290,6 +290,7 @@ function handleLogin(
       githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),
       googleEnabled: Boolean(options.google?.clientId && options.google?.clientSecret),
       loginPage: options.loginPage,
+      loginPageComponent: options.loginPageComponent,
       redirectURI,
     }));
 }

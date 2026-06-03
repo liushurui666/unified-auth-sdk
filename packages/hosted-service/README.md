@@ -13,7 +13,20 @@ pnpm add @rc-tool/unified-auth-sdk @rc-tool/unified-auth-hosted-service
 ## Next.js Embedded Routes
 
 ```ts
-import { createFileAuthStore, createHostedAuthRouteHandlers } from "@rc-tool/unified-auth-hosted-service";
+import {
+  createFileAuthStore,
+  createHostedAuthLoginPageComponent,
+  createHostedAuthRouteHandlers,
+} from "@rc-tool/unified-auth-hosted-service";
+
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+  brandName: "AI 项目管理平台",
+  heroTitle: "用企业账号安全登录",
+  panelTitle: "飞书登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+});
 
 export const hostedAuth = createHostedAuthRouteHandlers({
   allowDevLogin: process.env.AUTH_ALLOW_DEV_LOGIN !== "false",
@@ -21,19 +34,12 @@ export const hostedAuth = createHostedAuthRouteHandlers({
     {
       allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
       clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
-      loginPage: {
-        backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
-        brandName: "AI 项目管理平台",
-        heroTitle: "用企业账号安全登录",
-        panelTitle: "飞书登录",
-        primaryProvider: "feishu",
-        providers: ["feishu", "google", "github"],
-      },
       name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
       redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
     },
   ],
   authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
+  loginPageComponent: LoginPage,
   sessionSecret: process.env.AUTH_SESSION_SECRET!,
   store: createFileAuthStore({
     filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
@@ -68,37 +74,45 @@ The default store is file-based. Install `@rc-tool/unified-auth-prisma-store` on
 pnpm dlx @rc-tool/unified-auth-hosted-service init --app ai-pm --redirect http://localhost:3004/
 ```
 
-### 登录页 UI props
+### 登录页组件
 
-Hosted Auth 登录页是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要在 `createHostedAuthRouteHandlers` 里传 `loginPage` 配置，效果类似给 UI 组件传 props。
+Hosted Auth 登录页是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要把 SDK 提供的登录页组件传给 `loginPageComponent`。如果不传组件，SDK 会使用内置默认组件和预设样式。
 
 推荐写法：
 
 ```ts
+import {
+  createFileAuthStore,
+  createHostedAuthLoginPageComponent,
+  createHostedAuthRouteHandlers,
+} from "@rc-tool/unified-auth-hosted-service";
+
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
+  brandLabel: "企业协作入口",
+  brandName: "AI 项目管理平台",
+  devLoginLabel: "使用开发身份进入",
+  footerText: "Powered by Unified Auth",
+  heroDescription: "统一身份校验后进入项目驾驶舱。",
+  heroTitle: "欢迎回到项目驾驶舱",
+  logoUrl: "https://cdn.example.com/auth/logo.png",
+  panelDescription: "使用企业授权账号完成登录。",
+  panelTitle: "用飞书账号登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+  statusText: "企业 SSO",
+});
+
 export const hostedAuth = createHostedAuthRouteHandlers({
   applications: [
     {
       clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
-      loginPage: {
-        backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
-        brandLabel: "企业协作入口",
-        brandName: "AI 项目管理平台",
-        devLoginLabel: "使用开发身份进入",
-        footerText: "Powered by Unified Auth",
-        heroDescription: "统一身份校验后进入项目驾驶舱。",
-        heroTitle: "欢迎回到项目驾驶舱",
-        logoUrl: "https://cdn.example.com/auth/logo.png",
-        panelDescription: "使用企业授权账号完成登录。",
-        panelTitle: "用飞书账号登录",
-        primaryProvider: "feishu",
-        providers: ["feishu", "google", "github"],
-        statusText: "企业 SSO",
-      },
       name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
       redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
     },
   ],
   authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
+  loginPageComponent: LoginPage,
   sessionSecret: process.env.AUTH_SESSION_SECRET!,
   store: createFileAuthStore({
     filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
@@ -106,7 +120,7 @@ export const hostedAuth = createHostedAuthRouteHandlers({
 });
 ```
 
-配置项：
+组件配置项：
 
 | 字段 | 作用 |
 | --- | --- |
@@ -124,27 +138,27 @@ export const hostedAuth = createHostedAuthRouteHandlers({
 | `devLoginLabel` | 开发登录入口文案。 |
 | `footerText` | 底部说明文案，传空字符串可以隐藏。 |
 
-如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置 `loginPage`：
+如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独指定不同组件：
 
 ```ts
 applications: [
   {
-    loginPage: {
+    clientId: "ai-pm",
+    loginPageComponent: createHostedAuthLoginPageComponent({
       backgroundImageUrl: "https://cdn.example.com/ai-pm-login.jpg",
       heroTitle: "欢迎回到 AI PM",
       panelTitle: "用飞书账号登录",
-    },
-    clientId: "ai-pm",
+    }),
     name: "AI PM",
     redirectURI: "http://localhost:3004/",
   },
   {
-    loginPage: {
+    clientId: "admin-console",
+    loginPageComponent: createHostedAuthLoginPageComponent({
       backgroundImageUrl: "https://cdn.example.com/admin-login.jpg",
       heroTitle: "管理员控制台",
       panelTitle: "企业 SSO 登录",
-    },
-    clientId: "admin-console",
+    }),
     name: "Admin Console",
     redirectURI: "https://admin.example.com/",
   },
@@ -153,19 +167,33 @@ applications: [
 
 配置优先级是：
 
-1. `applications[].loginPage`
-2. `applications[].appearance.backgroundImageUrl`，仅兼容旧的背景图配置
-3. `createHostedAuthRouteHandlers({ loginPage })`
-4. `createHostedAuthRouteHandlers({ appearance.backgroundImageUrl })`，仅兼容旧的背景图配置
-5. SDK 默认 UI
+1. `applications[].loginPageComponent`
+2. `createHostedAuthRouteHandlers({ loginPageComponent })`
+3. SDK 默认登录页组件
+
+旧的 `loginPage` 和 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐用 `loginPageComponent`。
 
 环境变量仍然可以作为配置来源，但不是必须。比如：
 
 ```ts
-loginPage: {
+const LoginPage = createHostedAuthLoginPageComponent({
   backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
   heroTitle: process.env.AUTH_LOGIN_HERO_TITLE,
-}
+});
+```
+
+也可以完全自定义组件，但组件只拿 SDK 生成好的 `model`，不需要接触 secret、state 签名、callback 或 session：
+
+```ts
+const LoginPage = ({ model }) => {
+  const feishu = model.providers.find((provider) => provider.id === "feishu");
+
+  return `<!doctype html>
+    <main>
+      <h1>${model.appName}</h1>
+      <a href="${feishu?.href ?? "#"}">使用飞书登录</a>
+    </main>`;
+};
 ```
 
 ### 业务应用配置

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { createHostedAuthRouteHandlers, createHostedAuthService, createMemoryAuthStore } from "./index";
+import {
+  createHostedAuthLoginPageComponent,
+  createHostedAuthRouteHandlers,
+  createHostedAuthService,
+  createMemoryAuthStore,
+} from "./index";
 
 function createService() {
   return createHostedAuthService({
@@ -78,28 +83,13 @@ describe("hosted auth service", () => {
     expect(body).toContain("--auth-background-image: url(&#39;https://cdn.example.com/auth/login-bg.jpg&#39;)");
   });
 
-  it("configures the hosted login page through loginPage props", async () => {
+  it("renders the hosted login page through a configurable component", async () => {
     const service = createHostedAuthService({
       allowDevLogin: true,
       applications: [
         {
           allowedRedirectURIs: ["https://app.example.com/"],
           clientId: "workspace-app",
-          loginPage: {
-            backgroundImageUrl: "https://cdn.example.com/auth/component-bg.jpg",
-            brandLabel: "企业协作入口",
-            brandName: "AI 项目管理平台",
-            devLoginLabel: "使用开发身份进入",
-            footerText: "Powered by Unified Auth",
-            heroDescription: "统一身份校验后进入项目驾驶舱。",
-            heroTitle: "欢迎回到项目驾驶舱",
-            logoUrl: "https://cdn.example.com/auth/logo.png",
-            panelDescription: "使用企业授权账号完成登录。",
-            panelTitle: "用 GitHub 进入",
-            primaryProvider: "github",
-            providers: ["github"],
-            statusText: "企业 SSO",
-          },
           name: "Workspace App",
           redirectURI: "https://app.example.com/",
         },
@@ -113,6 +103,21 @@ describe("hosted auth service", () => {
         clientId: "github-client-id",
         clientSecret: "github-client-secret",
       },
+      loginPageComponent: createHostedAuthLoginPageComponent({
+        backgroundImageUrl: "https://cdn.example.com/auth/component-bg.jpg",
+        brandLabel: "企业协作入口",
+        brandName: "AI 项目管理平台",
+        devLoginLabel: "使用开发身份进入",
+        footerText: "Powered by Unified Auth",
+        heroDescription: "统一身份校验后进入项目驾驶舱。",
+        heroTitle: "欢迎回到项目驾驶舱",
+        logoUrl: "https://cdn.example.com/auth/logo.png",
+        panelDescription: "使用企业授权账号完成登录。",
+        panelTitle: "用 GitHub 进入",
+        primaryProvider: "github",
+        providers: ["github"],
+        statusText: "企业 SSO",
+      }),
       sessionSecret: "test-secret",
     });
     const response = await service.handleLogin(
@@ -131,6 +136,37 @@ describe("hosted auth service", () => {
     expect(body).toContain("--auth-background-image: url(&#39;https://cdn.example.com/auth/component-bg.jpg&#39;)");
     expect(body).toContain("https://auth.example.com/api/auth/github/start?client_id=workspace-app");
     expect(body).not.toContain("https://auth.example.com/api/auth/feishu/start?client_id=workspace-app");
+  });
+
+  it("lets a custom login page component render the SDK generated auth model", async () => {
+    const service = createHostedAuthService({
+      applications: [
+        {
+          allowedRedirectURIs: ["https://app.example.com/"],
+          clientId: "workspace-app",
+          name: "Workspace App",
+          redirectURI: "https://app.example.com/",
+        },
+      ],
+      authBaseURL: "https://auth.example.com",
+      github: {
+        clientId: "github-client-id",
+        clientSecret: "github-client-secret",
+      },
+      loginPageComponent({ model }) {
+        const github = model.providers.find((provider) => provider.id === "github");
+
+        return `<!doctype html><title>${model.appName}</title><a href="${github?.href ?? ""}">${github?.label ?? ""}</a>`;
+      },
+      sessionSecret: "test-secret",
+    });
+    const response = await service.handleLogin(
+      new Request("https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("<title>Workspace App</title>");
+    expect(body).toContain("https://auth.example.com/api/auth/github/start?client_id=workspace-app");
   });
 
   it("starts the GitHub OAuth web application flow", async () => {

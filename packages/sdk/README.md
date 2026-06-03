@@ -133,32 +133,52 @@ pnpm dlx @rc-tool/unified-auth-hosted-service doctor
 | `AUTH_CLIENT_NAME` | 可选 | Hosted Login 页面展示的业务应用名称，例如 `AI PM`。 |
 | `AUTH_ALLOWED_REDIRECT_URI` | 必填 | 登录成功后允许回跳的地址，例如 `http://localhost:3004/`。 |
 
-### 登录页 UI props
+### 登录页组件
 
 登录页 UI 配置只在安装并使用 `@rc-tool/unified-auth-hosted-service` 时生效。core SDK 只负责生成登录地址和读取认证上下文，不渲染登录页。
 
-Hosted Login 是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要在 route handler 里传 `loginPage` props：
+Hosted Login 是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要把 SDK 提供的组件传给 hosted-service。组件不传时，SDK 会使用默认组件和预设样式。
+
+```ts
+import { createHostedAuthLoginPageComponent } from "@rc-tool/unified-auth-hosted-service";
+
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+  brandName: "AI 项目管理平台",
+  heroTitle: "用企业账号安全登录",
+  panelTitle: "飞书登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+});
+
+export const hostedAuth = createHostedAuthRouteHandlers({
+  loginPageComponent: LoginPage,
+  // ...
+});
+```
+
+也可以给每个业务应用单独传组件：
 
 ```ts
 applications: [
   {
     allowedRedirectURIs: [resolveRedirectURI()],
     clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
-    loginPage: {
+    loginPageComponent: createHostedAuthLoginPageComponent({
       backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
       brandName: "AI 项目管理平台",
       heroTitle: "用企业账号安全登录",
       panelTitle: "飞书登录",
       primaryProvider: "feishu",
       providers: ["feishu", "google", "github"],
-    },
+    }),
     name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
     redirectURI: resolveRedirectURI(),
   },
 ],
 ```
 
-常用字段：
+默认组件常用配置字段：
 
 | 字段 | 作用 |
 | --- | --- |
@@ -173,7 +193,7 @@ applications: [
 | `statusText` | 右上角状态标签，传空字符串可以隐藏。 |
 | `devLoginLabel` / `footerText` | 开发登录入口和底部文案。 |
 
-如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `loginPage`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌 UI。
+如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `loginPageComponent`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌 UI。
 
 ### Session 和存储配置
 
@@ -382,6 +402,7 @@ pnpm add @rc-tool/unified-auth-sdk @rc-tool/unified-auth-hosted-service
 // src/lib/auth/hosted-auth.ts
 import {
   createFileAuthStore,
+  createHostedAuthLoginPageComponent,
   createHostedAuthRouteHandlers,
 } from "@rc-tool/unified-auth-hosted-service";
 
@@ -399,20 +420,21 @@ function resolveRedirectURI() {
   return readEnv("AUTH_ALLOWED_REDIRECT_URI", `${resolveAppBaseURL()}/`);
 }
 
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+  brandName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
+  heroTitle: "用飞书账号安全登录",
+  panelTitle: "飞书登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+});
+
 export const hostedAuth = createHostedAuthRouteHandlers({
   allowDevLogin: readEnv("AUTH_ALLOW_DEV_LOGIN", "true") !== "false",
   applications: [
     {
       allowedRedirectURIs: [resolveRedirectURI()],
       clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
-      loginPage: {
-        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
-        brandName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
-        heroTitle: "用飞书账号安全登录",
-        panelTitle: "飞书登录",
-        primaryProvider: "feishu",
-        providers: ["feishu", "google", "github"],
-      },
       name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
       redirectURI: resolveRedirectURI(),
     },
@@ -433,6 +455,7 @@ export const hostedAuth = createHostedAuthRouteHandlers({
     clientSecret: readEnv("GOOGLE_CLIENT_SECRET") || undefined,
     redirectURI: readEnv("GOOGLE_REDIRECT_URI") || undefined,
   },
+  loginPageComponent: LoginPage,
   sessionSecret: readEnv("AUTH_SESSION_SECRET", readEnv("SESSION_SECRET", "local-auth-secret")),
   store: createFileAuthStore({
     filePath: readEnv("AUTH_STORE_FILE", ".auth/unified-auth-store.json"),

@@ -1,5 +1,9 @@
 export { AUTH_SERVICE_SESSION_COOKIE, AUTH_SERVICE_STATE_COOKIE } from "./hosted-service/constants.js";
-export { renderLoginPage as renderHostedAuthLoginPage } from "./hosted-service/login-page/index.js";
+export {
+  createHostedAuthLoginPageComponent,
+  defaultHostedAuthLoginPageComponent,
+  renderLoginPage as renderHostedAuthLoginPage,
+} from "./hosted-service/login-page/index.js";
 export type { RenderLoginPageParams } from "./hosted-service/login-page/types.js";
 export { createHostedAuthRouteHandlers, handleHostedAuthRequest } from "./hosted-service/routes.js";
 export type { HostedAuthRouteHandler, HostedAuthRouteHandlers } from "./hosted-service/routes.js";
@@ -8,7 +12,11 @@ export { createFileAuthStore, createMemoryAuthStore } from "./hosted-service/sto
 export type {
   HostedAuthAppearance,
   HostedAuthApplication,
+  HostedAuthLoginPageComponent,
   HostedAuthLoginPageConfig,
+  HostedAuthLoginPageModel,
+  HostedAuthLoginPageProps,
+  HostedAuthLoginProviderView,
   HostedAuthLoginProviderId,
   HostedAuthServiceOptions,
   HostedFeishuConfig,

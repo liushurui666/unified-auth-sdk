@@ -1,20 +1,23 @@
 import type {
   HostedAuthAppearance,
   HostedAuthApplication,
+  HostedAuthLoginPageComponent,
   HostedAuthLoginPageConfig,
+  HostedAuthLoginPageModel,
+  HostedAuthLoginPageProps,
   HostedAuthLoginProviderId,
+  HostedAuthLoginProviderView,
 } from "../types.js";
 
 export type LoginProviderId = HostedAuthLoginProviderId;
 
-export type LoginProviderView = {
-  enabled: boolean;
-  href: string;
-  icon: string;
-  iconClassName: string;
-  id: LoginProviderId;
-  label: string;
-};
+export type LoginProviderView = HostedAuthLoginProviderView;
+
+export type LoginPageModel = HostedAuthLoginPageModel;
+
+export type LoginPageProps = HostedAuthLoginPageProps;
+
+export type LoginPageComponent = HostedAuthLoginPageComponent;
 
 export type LoginPageLinks = {
   devLogin: string;
@@ -32,5 +35,6 @@ export type RenderLoginPageParams = {
   githubEnabled: boolean;
   googleEnabled: boolean;
   loginPage?: HostedAuthLoginPageConfig;
+  loginPageComponent?: HostedAuthLoginPageComponent;
   redirectURI: string;
 };

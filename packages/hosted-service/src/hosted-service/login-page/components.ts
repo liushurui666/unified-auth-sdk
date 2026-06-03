@@ -1,5 +1,5 @@
 import { escapeHtml } from "./escape.js";
-import type { LoginPageLinks, LoginProviderId, LoginProviderView } from "./types.js";
+import type { LoginProviderId, LoginProviderView } from "./types.js";
 
 export type LoginPageHeroContent = {
   brandName: string;
@@ -62,12 +62,12 @@ export function renderProviderList(providers: LoginProviderView[], primaryProvid
     </section>`;
 }
 
-export function renderDevLogin(allowDevLogin: boolean, links: LoginPageLinks, label = "使用开发账号进入") {
+export function renderDevLogin(allowDevLogin: boolean, href: string, label = "使用开发账号进入") {
   if (!allowDevLogin) {
     return "";
   }
 
-  return `<a class="dev-link" href="${escapeHtml(links.devLogin)}">${escapeHtml(label)}</a>`;
+  return `<a class="dev-link" href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;
 }
 
 export function renderFooter(clientId: string, footerText?: string) {

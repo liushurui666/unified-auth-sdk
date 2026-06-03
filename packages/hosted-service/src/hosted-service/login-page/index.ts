@@ -9,7 +9,13 @@ import {
 import { renderDocument } from "./document.js";
 import { escapeHtml } from "./escape.js";
 import { createLoginPageLinks } from "./links.js";
-import type { LoginProviderView, RenderLoginPageParams } from "./types.js";
+import type {
+  LoginPageComponent,
+  LoginPageModel,
+  LoginPageProps,
+  LoginProviderView,
+  RenderLoginPageParams,
+} from "./types.js";
 import type { HostedAuthLoginPageConfig } from "../types.js";
 
 type LoginPageContent = LoginPageHeroContent & {
@@ -22,17 +28,37 @@ type LoginPageContent = LoginPageHeroContent & {
 };
 
 export function renderLoginPage(params: RenderLoginPageParams) {
-  const appName = params.app.name ?? params.clientId;
-  const loginPage = resolveLoginPageConfig(params);
-  const links = createLoginPageLinks(params, loginPage);
-  const primaryProvider = resolvePrimaryProvider(links.providers, loginPage.primaryProvider);
-  const content = resolveLoginPageContent(loginPage, appName, primaryProvider);
+  const component = params.app.loginPageComponent ?? params.loginPageComponent ?? defaultHostedAuthLoginPageComponent;
+  const loginPage = mergeLoginPageConfig(component.defaultConfig ?? {}, resolveLoginPageConfig(params));
+
+  return component({
+    config: loginPage,
+    model: createLoginPageModel(params, loginPage),
+  });
+}
+
+export function createHostedAuthLoginPageComponent(
+  defaultConfig: HostedAuthLoginPageConfig = {},
+): LoginPageComponent {
+  const component: LoginPageComponent = (props) => defaultHostedAuthLoginPageComponent({
+    config: mergeLoginPageConfig(defaultConfig, props.config),
+    model: props.model,
+  });
+
+  component.defaultConfig = defaultConfig;
+
+  return component;
+}
+
+export const defaultHostedAuthLoginPageComponent: LoginPageComponent = (props: LoginPageProps) => {
+  const primaryProvider = resolvePrimaryProvider(props.model.providers, props.config.primaryProvider);
+  const content = resolveLoginPageContent(props.config, props.model.appName, primaryProvider);
   const status = content.statusText
     ? `<div class="auth-status">${escapeHtml(content.statusText)}</div>`
     : "";
 
   return renderDocument({
-    backgroundImageUrl: loginPage.backgroundImageUrl,
+    backgroundImageUrl: props.config.backgroundImageUrl,
     body: `
   ${status}
   <main class="auth-shell">
@@ -41,14 +67,31 @@ export function renderLoginPage(params: RenderLoginPageParams) {
       <div class="login-kicker">${escapeHtml(content.panelKicker)}</div>
       <h2 id="login-title">${escapeHtml(content.panelTitle)}</h2>
       <p>${escapeHtml(content.panelDescription)}</p>
-      ${renderError(params.error)}
-      ${renderProviderList(links.providers, loginPage.primaryProvider)}
-      ${renderDevLogin(params.allowDevLogin, links, content.devLoginLabel)}
-      ${renderFooter(params.clientId, content.footerText)}
+      ${renderError(props.model.error)}
+      ${renderProviderList(props.model.providers, props.config.primaryProvider)}
+      ${renderDevLogin(props.model.allowDevLogin, props.model.devLoginHref, content.devLoginLabel)}
+      ${renderFooter(props.model.clientId, content.footerText)}
     </section>
   </main>`,
     title: content.panelKicker,
   });
+};
+
+function createLoginPageModel(
+  params: RenderLoginPageParams,
+  loginPage: HostedAuthLoginPageConfig,
+): LoginPageModel {
+  const links = createLoginPageLinks(params, loginPage);
+
+  return {
+    allowDevLogin: params.allowDevLogin,
+    appName: params.app.name ?? params.clientId,
+    clientId: params.clientId,
+    devLoginHref: links.devLogin,
+    error: params.error,
+    providers: links.providers,
+    redirectURI: params.redirectURI,
+  };
 }
 
 function resolveLoginPageConfig(params: RenderLoginPageParams): HostedAuthLoginPageConfig {
@@ -62,6 +105,17 @@ function resolveLoginPageConfig(params: RenderLoginPageParams): HostedAuthLoginP
       ?? params.app.appearance?.backgroundImageUrl
       ?? serviceLoginPage.backgroundImageUrl
       ?? params.appearance?.backgroundImageUrl,
+  };
+}
+
+function mergeLoginPageConfig(
+  defaultConfig: HostedAuthLoginPageConfig,
+  overrideConfig: HostedAuthLoginPageConfig,
+): HostedAuthLoginPageConfig {
+  return {
+    ...defaultConfig,
+    ...overrideConfig,
+    backgroundImageUrl: overrideConfig.backgroundImageUrl ?? defaultConfig.backgroundImageUrl,
   };
 }
 

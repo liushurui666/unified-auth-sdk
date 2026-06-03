@@ -92,9 +92,9 @@ const loginURL = auth.getLoginURL({
 });
 ```
 
-## 应用与登录页配置
+## 应用与登录页组件
 
-core SDK 的应用配置用于描述业务应用身份和登录入口偏好；Hosted Login 的页面 UI 由 `@rc-tool/unified-auth-hosted-service` 的 `loginPage` props 控制。
+core SDK 的应用配置用于描述业务应用身份和登录入口偏好；Hosted Login 的页面 UI 由 `@rc-tool/unified-auth-hosted-service` 的 `loginPageComponent` 控制。不传组件时会使用 SDK 默认组件和预设样式。
 
 ```ts
 import type { AuthApplicationConfig } from "@rc-tool/unified-auth-sdk";
@@ -115,23 +115,25 @@ export const appConfig: AuthApplicationConfig = {
 };
 ```
 
-如果业务项目使用内嵌 Hosted Auth，可以像给组件传 props 一样配置登录页：
+如果业务项目使用内嵌 Hosted Auth，可以使用 SDK 提供的默认登录页组件：
 
 ```ts
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
+  brandName: "AI 项目管理平台",
+  heroTitle: "用企业账号安全登录",
+  panelTitle: "飞书登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+});
+
 createHostedAuthRouteHandlers({
-  loginPage: {
-    backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
-    brandName: "AI 项目管理平台",
-    heroTitle: "用企业账号安全登录",
-    panelTitle: "飞书登录",
-    primaryProvider: "feishu",
-    providers: ["feishu", "google", "github"],
-  },
+  loginPageComponent: LoginPage,
   // ...
 });
 ```
 
-多个业务应用共用一套 Auth Service 时，也可以写到 `applications[].loginPage`，按 `clientId` 分别展示不同品牌 UI。旧的 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐使用 `loginPage.backgroundImageUrl`。
+多个业务应用共用一套 Auth Service 时，也可以写到 `applications[].loginPageComponent`，按 `clientId` 分别展示不同品牌 UI。旧的 `loginPage` 和 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐使用 `loginPageComponent`。
 
 ## 内嵌 Hosted Auth 路由
 
@@ -139,27 +141,33 @@ createHostedAuthRouteHandlers({
 
 ```ts
 // src/lib/hosted-auth.ts
-import { createHostedAuthRouteHandlers, createFileAuthStore } from "@rc-tool/unified-auth-hosted-service";
+import {
+  createFileAuthStore,
+  createHostedAuthLoginPageComponent,
+  createHostedAuthRouteHandlers,
+} from "@rc-tool/unified-auth-hosted-service";
+
+const LoginPage = createHostedAuthLoginPageComponent({
+  backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+  brandName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
+  heroTitle: "用企业账号安全登录",
+  panelTitle: "飞书登录",
+  primaryProvider: "feishu",
+  providers: ["feishu", "google", "github"],
+});
 
 export const hostedAuth = createHostedAuthRouteHandlers({
   allowDevLogin: process.env.AUTH_ALLOW_DEV_LOGIN !== "false",
   applications: [
     {
       allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
-      loginPage: {
-        backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
-        brandName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
-        heroTitle: "用企业账号安全登录",
-        panelTitle: "飞书登录",
-        primaryProvider: "feishu",
-        providers: ["feishu", "google", "github"],
-      },
       clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
       name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
       redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
     },
   ],
   authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
+  loginPageComponent: LoginPage,
   feishu: {
     appId: process.env.FEISHU_APP_ID,
     appSecret: process.env.FEISHU_APP_SECRET,
