@@ -50,6 +50,34 @@ describe("hosted auth service", () => {
     expect(body).not.toContain("provider-note");
   });
 
+  it("allows each application to customize the login background image", async () => {
+    const service = createHostedAuthService({
+      applications: [
+        {
+          allowedRedirectURIs: ["https://app.example.com/"],
+          appearance: {
+            backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
+          },
+          clientId: "workspace-app",
+          name: "Workspace App",
+          redirectURI: "https://app.example.com/",
+        },
+      ],
+      authBaseURL: "https://auth.example.com",
+      github: {
+        clientId: "github-client-id",
+        clientSecret: "github-client-secret",
+      },
+      sessionSecret: "test-secret",
+    });
+    const response = await service.handleLogin(
+      new Request("https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("--auth-background-image: url(&#39;https://cdn.example.com/auth/login-bg.jpg&#39;)");
+  });
+
   it("starts the GitHub OAuth web application flow", async () => {
     const response = await createService().handleGitHubStart(
       new Request("https://auth.example.com/api/auth/github/start?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),

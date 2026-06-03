@@ -82,6 +82,7 @@ AUTH_SERVICE_URL=http://localhost:3004
 NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:3004
 AUTH_CLIENT_ID=ai-pm
 NEXT_PUBLIC_AUTH_CLIENT_ID=ai-pm
+AUTH_LOGIN_BACKGROUND_URL=https://cdn.example.com/auth/login-bg.jpg
 AUTH_ALLOWED_REDIRECT_URI=http://localhost:3004/
 ```
 
@@ -316,6 +317,9 @@ export const hostedAuth = createHostedAuthRouteHandlers({
   applications: [
     {
       allowedRedirectURIs: [resolveRedirectURI()],
+      appearance: {
+        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+      },
       clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
       name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
       redirectURI: resolveRedirectURI(),

@@ -1,6 +1,6 @@
 {
   "name": "@rc-tool/unified-auth-hosted-service",
-  "version": "0.2.1",
+  "version": "0.2.4",
   "type": "module",
   "description": "Embedded and standalone hosted auth runtime for Unified Auth.",
   "main": "./dist/index.js",

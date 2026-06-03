@@ -2,9 +2,14 @@ import type { HostedAuthStore } from "./store/index.js";
 
 export interface HostedAuthApplication {
   allowedRedirectURIs?: string[];
+  appearance?: HostedAuthAppearance;
   clientId: string;
   name?: string;
   redirectURI?: string;
+}
+
+export interface HostedAuthAppearance {
+  backgroundImageUrl?: string;
 }
 
 export interface HostedFeishuConfig {
@@ -30,6 +35,7 @@ export interface HostedGitHubConfig {
 export interface HostedAuthServiceOptions {
   allowDevLogin?: boolean;
   applications?: HostedAuthApplication[];
+  appearance?: HostedAuthAppearance;
   authBaseURL: string;
   cookieDomain?: string;
   cookieName?: string;

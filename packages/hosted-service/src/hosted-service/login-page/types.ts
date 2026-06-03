@@ -1,4 +1,4 @@
-import type { HostedAuthApplication } from "../types.js";
+import type { HostedAuthAppearance, HostedAuthApplication } from "../types.js";
 
 export type LoginProviderId = "feishu" | "github" | "google";
 
@@ -18,6 +18,7 @@ export type LoginPageLinks = {
 
 export type RenderLoginPageParams = {
   allowDevLogin: boolean;
+  appearance?: HostedAuthAppearance;
   app: HostedAuthApplication;
   authBaseURL: string;
   clientId: string;

@@ -75,6 +75,9 @@ const server = createHostedAuthNodeServer({
   applications: [
     {
       allowedRedirectURIs: [redirectURI],
+      appearance: {
+        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+      },
       clientId,
       name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
       redirectURI,

@@ -20,6 +20,9 @@ export const hostedAuth = createHostedAuthRouteHandlers({
   applications: [
     {
       allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
+      appearance: {
+        backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+      },
       clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
       name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
       redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
@@ -51,3 +54,13 @@ pnpm dlx @rc-tool/unified-auth-hosted-service doctor
 ```
 
 The default store is file-based. Install `@rc-tool/unified-auth-prisma-store` only when `AUTH_STORE_PROVIDER=prisma`.
+
+## 登录页背景图
+
+Hosted Auth 登录页默认带兜底背景图，也支持业务项目覆盖：
+
+```env
+AUTH_LOGIN_BACKGROUND_URL=https://cdn.example.com/auth/login-bg.jpg
+```
+
+如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置 `appearance.backgroundImageUrl`。

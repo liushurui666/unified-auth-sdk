@@ -279,11 +279,12 @@ function handleLogin(
     return redirect(createProviderStartUrl(authBaseURL, provider, app.clientId, redirectURI).toString());
   }
 
-  return html(renderLoginPage({
-    allowDevLogin,
-    app,
-    authBaseURL,
-    clientId: app.clientId,
+    return html(renderLoginPage({
+      allowDevLogin,
+      app,
+      appearance: options.appearance,
+      authBaseURL,
+      clientId: app.clientId,
     error,
     feishuEnabled: Boolean(options.feishu?.appId && options.feishu?.appSecret),
     githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),

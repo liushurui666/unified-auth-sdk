@@ -30,6 +30,7 @@ describe("auth env CLI helpers", () => {
 
     expect(result.env.added).toContain("AUTH_SESSION_SECRET");
     expect(env).toContain("AUTH_CLIENT_ID=ai-pm");
+    expect(env).toContain("AUTH_LOGIN_BACKGROUND_URL=");
     expect(env).toContain("AUTH_SERVICE_PORT=3004");
     expect(env).toContain("AUTH_STORE_PROVIDER=file");
     expect(env).toContain("AUTH_STORE_FILE=.auth/unified-auth-store.json");
