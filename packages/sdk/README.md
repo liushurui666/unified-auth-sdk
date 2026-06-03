@@ -151,31 +151,17 @@ const LoginPage = createHostedAuthLoginPageComponent({
 });
 
 export const hostedAuth = createHostedAuthRouteHandlers({
+  clientId: "ai-pm",
+  appName: "AI PM",
+  authBaseURL: "http://localhost:3004",
+  redirectURI: "http://localhost:3004/",
+  allowedRedirectURIs: ["http://localhost:3004/"],
   loginPageComponent: LoginPage,
   // ...
 });
 ```
 
-也可以给每个业务应用单独传组件：
-
-```ts
-applications: [
-  {
-    allowedRedirectURIs: [resolveRedirectURI()],
-    clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
-    loginPageComponent: createHostedAuthLoginPageComponent({
-      backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
-      brandName: "AI 项目管理平台",
-      heroTitle: "用企业账号安全登录",
-      panelTitle: "飞书登录",
-      primaryProvider: "feishu",
-      providers: ["feishu", "google", "github"],
-    }),
-    name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
-    redirectURI: resolveRedirectURI(),
-  },
-],
-```
+业务侧不需要维护多应用数组。内嵌 Hosted Auth 默认就是一个业务项目挂一套登录页和认证路由，当前项目的 `clientId`、展示名、回跳地址和 UI 组件直接传给 `createHostedAuthRouteHandlers` 即可。组件只是 UI 壳的配置入口，里面的 OAuth 链接、state 签名、callback、session 签发和用户存储仍然都由 SDK 黑盒处理。
 
 默认组件常用配置字段：
 
@@ -191,8 +177,6 @@ applications: [
 | `providers` | 登录方式展示顺序和范围，例如 `["feishu"]`。 |
 | `statusText` | 右上角状态标签，传空字符串可以隐藏。 |
 | `devLoginLabel` / `footerText` | 开发登录入口和底部文案。 |
-
-如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `loginPageComponent`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌 UI。
 
 ### Session 和存储配置
 
@@ -430,15 +414,10 @@ const LoginPage = createHostedAuthLoginPageComponent({
 
 export const hostedAuth = createHostedAuthRouteHandlers({
   allowDevLogin: readEnv("AUTH_ALLOW_DEV_LOGIN", "true") !== "false",
-  applications: [
-    {
-      allowedRedirectURIs: [resolveRedirectURI()],
-      clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
-      name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
-      redirectURI: resolveRedirectURI(),
-    },
-  ],
+  allowedRedirectURIs: [resolveRedirectURI()],
+  appName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
   authBaseURL: resolveAppBaseURL(),
+  clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
   feishu: {
     appId: readEnv("FEISHU_APP_ID") || undefined,
     appSecret: readEnv("FEISHU_APP_SECRET") || undefined,
@@ -455,6 +434,7 @@ export const hostedAuth = createHostedAuthRouteHandlers({
     redirectURI: readEnv("GOOGLE_REDIRECT_URI") || undefined,
   },
   loginPageComponent: LoginPage,
+  redirectURI: resolveRedirectURI(),
   sessionSecret: readEnv("AUTH_SESSION_SECRET", readEnv("SESSION_SECRET", "local-auth-secret")),
   store: createFileAuthStore({
     filePath: readEnv("AUTH_STORE_FILE", ".auth/unified-auth-store.json"),

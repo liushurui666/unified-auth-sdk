@@ -30,16 +30,12 @@ const LoginPage = createHostedAuthLoginPageComponent({
 
 export const hostedAuth = createHostedAuthRouteHandlers({
   allowDevLogin: process.env.AUTH_ALLOW_DEV_LOGIN !== "false",
-  applications: [
-    {
-      allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
-      clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
-      name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
-      redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
-    },
-  ],
+  allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
+  appName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
   authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
+  clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
   loginPageComponent: LoginPage,
+  redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
   sessionSecret: process.env.AUTH_SESSION_SECRET!,
   store: createFileAuthStore({
     filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
@@ -104,15 +100,12 @@ const LoginPage = createHostedAuthLoginPageComponent({
 });
 
 export const hostedAuth = createHostedAuthRouteHandlers({
-  applications: [
-    {
-      clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
-      name: process.env.AUTH_CLIENT_NAME ?? "AI PM",
-      redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
-    },
-  ],
+  allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
+  appName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
   authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
+  clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
   loginPageComponent: LoginPage,
+  redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
   sessionSecret: process.env.AUTH_SESSION_SECRET!,
   store: createFileAuthStore({
     filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
@@ -138,42 +131,16 @@ export const hostedAuth = createHostedAuthRouteHandlers({
 | `devLoginLabel` | 开发登录入口文案。 |
 | `footerText` | 底部说明文案，传空字符串可以隐藏。 |
 
-如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独指定不同组件：
+业务侧不需要配置多应用数组。内嵌 Hosted Auth 的定位是“当前业务项目自己挂登录页和 `/api/auth/*`”，因此一个项目只需要在 `createHostedAuthRouteHandlers` 上传当前项目的 `clientId`、`appName`、`redirectURI`、`allowedRedirectURIs` 和 `loginPageComponent`。
 
-```ts
-applications: [
-  {
-    clientId: "ai-pm",
-    loginPageComponent: createHostedAuthLoginPageComponent({
-      backgroundImageUrl: "https://cdn.example.com/ai-pm-login.jpg",
-      heroTitle: "欢迎回到 AI PM",
-      panelTitle: "用飞书账号登录",
-    }),
-    name: "AI PM",
-    redirectURI: "http://localhost:3004/",
-  },
-  {
-    clientId: "admin-console",
-    loginPageComponent: createHostedAuthLoginPageComponent({
-      backgroundImageUrl: "https://cdn.example.com/admin-login.jpg",
-      heroTitle: "管理员控制台",
-      panelTitle: "企业 SSO 登录",
-    }),
-    name: "Admin Console",
-    redirectURI: "https://admin.example.com/",
-  },
-],
-```
+登录页组件的配置优先级是：
 
-配置优先级是：
-
-1. `applications[].loginPageComponent`
-2. `createHostedAuthRouteHandlers({ loginPageComponent })`
-3. SDK 默认登录页组件
+1. `createHostedAuthRouteHandlers({ loginPageComponent })`
+2. SDK 默认登录页组件
 
 旧的 `loginPage` 和 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐用 `loginPageComponent`。
 
-独立 Auth Service 启动器不读取 `AUTH_LOGIN_*` 这类全局样式环境变量；共享一个 Auth Service 服务多个业务应用时，样式应该按 `clientId` 从应用配置入口读取，而不是为每套样式部署一套服务。
+独立 Auth Service 启动器不读取 `AUTH_LOGIN_*` 这类全局样式环境变量；后续如果要做共享域名的独立服务，样式会走服务侧自己的应用配置入口，不要求业务项目在 SDK 接入代码里维护应用数组。
 
 也可以完全自定义组件，但组件只拿 SDK 生成好的 `model`，不需要接触 secret、state 签名、callback 或 session：
 

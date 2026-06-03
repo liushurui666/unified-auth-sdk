@@ -8,19 +8,15 @@ import {
 
 function createService() {
   return createHostedAuthService({
-    applications: [
-      {
-        allowedRedirectURIs: ["https://app.example.com/"],
-        clientId: "workspace-app",
-        name: "Workspace App",
-        redirectURI: "https://app.example.com/",
-      },
-    ],
+    allowedRedirectURIs: ["https://app.example.com/"],
+    appName: "Workspace App",
     authBaseURL: "https://auth.example.com",
+    clientId: "workspace-app",
     github: {
       clientId: "github-client-id",
       clientSecret: "github-client-secret",
     },
+    redirectURI: "https://app.example.com/",
     sessionSecret: "test-secret",
   });
 }
@@ -55,24 +51,20 @@ describe("hosted auth service", () => {
     expect(body).not.toContain("provider-note");
   });
 
-  it("allows each application to customize the login background image", async () => {
+  it("allows the embedded application to customize the login background image", async () => {
     const service = createHostedAuthService({
-      applications: [
-        {
-          allowedRedirectURIs: ["https://app.example.com/"],
-          appearance: {
-            backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
-          },
-          clientId: "workspace-app",
-          name: "Workspace App",
-          redirectURI: "https://app.example.com/",
-        },
-      ],
+      allowedRedirectURIs: ["https://app.example.com/"],
+      appearance: {
+        backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
+      },
+      appName: "Workspace App",
       authBaseURL: "https://auth.example.com",
+      clientId: "workspace-app",
       github: {
         clientId: "github-client-id",
         clientSecret: "github-client-secret",
       },
+      redirectURI: "https://app.example.com/",
       sessionSecret: "test-secret",
     });
     const response = await service.handleLogin(
@@ -86,15 +78,10 @@ describe("hosted auth service", () => {
   it("renders the hosted login page through a configurable component", async () => {
     const service = createHostedAuthService({
       allowDevLogin: true,
-      applications: [
-        {
-          allowedRedirectURIs: ["https://app.example.com/"],
-          clientId: "workspace-app",
-          name: "Workspace App",
-          redirectURI: "https://app.example.com/",
-        },
-      ],
+      allowedRedirectURIs: ["https://app.example.com/"],
+      appName: "Workspace App",
       authBaseURL: "https://auth.example.com",
+      clientId: "workspace-app",
       feishu: {
         appId: "feishu-client-id",
         appSecret: "feishu-client-secret",
@@ -118,6 +105,7 @@ describe("hosted auth service", () => {
         providers: ["github"],
         statusText: "企业 SSO",
       }),
+      redirectURI: "https://app.example.com/",
       sessionSecret: "test-secret",
     });
     const response = await service.handleLogin(
@@ -140,15 +128,10 @@ describe("hosted auth service", () => {
 
   it("lets a custom login page component render the SDK generated auth model", async () => {
     const service = createHostedAuthService({
-      applications: [
-        {
-          allowedRedirectURIs: ["https://app.example.com/"],
-          clientId: "workspace-app",
-          name: "Workspace App",
-          redirectURI: "https://app.example.com/",
-        },
-      ],
+      allowedRedirectURIs: ["https://app.example.com/"],
+      appName: "Workspace App",
       authBaseURL: "https://auth.example.com",
+      clientId: "workspace-app",
       github: {
         clientId: "github-client-id",
         clientSecret: "github-client-secret",
@@ -158,6 +141,7 @@ describe("hosted auth service", () => {
 
         return `<!doctype html><title>${model.appName}</title><a href="${github?.href ?? ""}">${github?.label ?? ""}</a>`;
       },
+      redirectURI: "https://app.example.com/",
       sessionSecret: "test-secret",
     });
     const response = await service.handleLogin(
@@ -184,21 +168,27 @@ describe("hosted auth service", () => {
     expect(response.headers.get("set-cookie")).toContain("unified_auth_state=");
   });
 
+  it("rejects requests for a different client id", async () => {
+    const response = await createService().handleGitHubStart(
+      new Request("https://auth.example.com/api/auth/github/start?client_id=unknown-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("client_id unknown-app is not configured");
+  });
+
   it("dispatches embedded business app routes", async () => {
     const handlers = createHostedAuthRouteHandlers({
-      applications: [
-        {
-          allowedRedirectURIs: ["http://localhost:3004/"],
-          clientId: "ai-pm",
-          name: "AI PM",
-          redirectURI: "http://localhost:3004/",
-        },
-      ],
+      allowedRedirectURIs: ["http://localhost:3004/"],
+      appName: "AI PM",
       authBaseURL: "http://localhost:3004",
+      clientId: "ai-pm",
       github: {
         clientId: "github-client-id",
         clientSecret: "github-client-secret",
       },
+      redirectURI: "http://localhost:3004/",
       sessionSecret: "test-secret",
       store: createMemoryAuthStore(),
     });
@@ -219,15 +209,11 @@ describe("hosted auth service", () => {
 
   it("persists hosted sessions with a canonical auth user id", async () => {
     const service = createHostedAuthService({
-      applications: [
-        {
-          allowedRedirectURIs: ["https://app.example.com/"],
-          clientId: "workspace-app",
-          redirectURI: "https://app.example.com/",
-        },
-      ],
       allowDevLogin: true,
+      allowedRedirectURIs: ["https://app.example.com/"],
       authBaseURL: "https://auth.example.com",
+      clientId: "workspace-app",
+      redirectURI: "https://app.example.com/",
       sessionSecret: "test-secret",
       store: createMemoryAuthStore(),
     });

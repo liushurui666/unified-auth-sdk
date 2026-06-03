@@ -40,6 +40,14 @@ export interface HostedAuthApplication {
   redirectURI?: string;
 }
 
+export interface HostedAuthSingleApplicationOptions {
+  allowedRedirectURIs?: string[];
+  appName?: string;
+  clientId: string;
+  redirectURI?: string;
+  siteURL?: string;
+}
+
 export interface HostedAuthAppearance {
   backgroundImageUrl?: string;
 }
@@ -82,11 +90,10 @@ export interface HostedGitHubConfig {
   scopes?: string[];
 }
 
-export interface HostedAuthServiceOptions {
+export interface HostedAuthServiceOptions extends HostedAuthSingleApplicationOptions {
   allowDevLogin?: boolean;
-  applications?: HostedAuthApplication[];
   appearance?: HostedAuthAppearance;
-  authBaseURL: string;
+  authBaseURL?: string;
   cookieDomain?: string;
   cookieName?: string;
   feishu?: HostedFeishuConfig;

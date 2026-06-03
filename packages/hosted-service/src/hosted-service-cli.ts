@@ -72,15 +72,10 @@ async function importPrismaStore() {
 
 const server = createHostedAuthNodeServer({
   allowDevLogin: readEnv("AUTH_ALLOW_DEV_LOGIN", "true") !== "false",
-  applications: [
-    {
-      allowedRedirectURIs: [redirectURI],
-      clientId,
-      name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
-      redirectURI,
-    },
-  ],
+  allowedRedirectURIs: [redirectURI],
+  appName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
   authBaseURL,
+  clientId,
   cookieDomain: readEnv("AUTH_COOKIE_DOMAIN") || undefined,
   feishu: {
     appId: readEnv("FEISHU_APP_ID") || undefined,
@@ -97,6 +92,7 @@ const server = createHostedAuthNodeServer({
     clientSecret: readEnv("GITHUB_CLIENT_SECRET") || undefined,
     redirectURI: readEnv("GITHUB_REDIRECT_URI") || undefined,
   },
+  redirectURI,
   sessionSecret,
   store: await createAuthStore(),
 });

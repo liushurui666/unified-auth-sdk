@@ -1,5 +1,5 @@
 import type { AuthUser } from "@rc-tool/unified-auth-sdk/service-client";
-import { createProviderStartUrl, getApplication, getClientId, getRedirectURI, isRedirectAllowed, normalizeBaseURL } from "./applications.js";
+import { createProviderStartUrl, getAuthBaseURL, getRedirectURI, isRedirectAllowed, validateRequestClient } from "./applications.js";
 import { AUTH_SERVICE_SESSION_COOKIE, AUTH_SERVICE_STATE_COOKIE } from "./constants.js";
 import { appendCookie, clearCookie, createSessionCookie } from "./cookies.js";
 import { html, json, redirect } from "./http.js";
@@ -23,7 +23,7 @@ import type { HostedAuthApplication, HostedAuthServiceOptions } from "./types.js
 type ProviderId = Exclude<HostedAuthProviderId, "dev">;
 
 export function createHostedAuthService(options: HostedAuthServiceOptions) {
-  const authBaseURL = normalizeBaseURL(options.authBaseURL);
+  const authBaseURL = getAuthBaseURL(options);
   const allowDevLogin = options.allowDevLogin ?? false;
   const store = options.store ?? createMemoryAuthStore();
 
@@ -73,10 +73,12 @@ export function createHostedAuthService(options: HostedAuthServiceOptions) {
 
   function handleProviderStart(request: Request, provider: ProviderId) {
     const providerClientId = getProviderClientId(provider);
-    const clientId = getClientId(request, options);
-    const app = getApplication(options, clientId);
+    const { app, clientId, error } = validateRequestClient(request, options);
     const redirectURI = getRedirectURI(request, app);
 
+    if (error) {
+      return json({ error }, { status: 400 });
+    }
     if (!providerClientId) {
       return redirect(`${authBaseURL}/login?client_id=${encodeURIComponent(clientId)}&error=${encodeURIComponent(getProviderDisabledMessage(provider))}`);
     }
@@ -237,10 +239,12 @@ function handleDevLogin(
     return json({ error: "开发登录未启用" }, { status: 403 });
   }
 
-  const clientId = getClientId(request, options);
-  const app = getApplication(options, clientId);
+  const { app, error } = validateRequestClient(request, options);
   const redirectURI = getRedirectURI(request, app);
 
+  if (error) {
+    return json({ error }, { status: 400 });
+  }
   if (!isRedirectAllowed(redirectURI, app)) {
     return json({ error: "redirect_uri 不在应用白名单中" }, { status: 400 });
   }
@@ -266,12 +270,14 @@ function handleLogin(
   allowDevLogin: boolean,
 ) {
   const url = new URL(request.url);
-  const clientId = getClientId(request, options);
-  const app = getApplication(options, clientId);
+  const { app, error: clientError } = validateRequestClient(request, options);
   const redirectURI = getRedirectURI(request, app);
   const provider = url.searchParams.get("provider");
-  const error = url.searchParams.get("error") ?? undefined;
+  const loginError = url.searchParams.get("error") ?? undefined;
 
+  if (clientError) {
+    return json({ error: clientError }, { status: 400 });
+  }
   if (!isRedirectAllowed(redirectURI, app)) {
     return json({ error: "redirect_uri 不在应用白名单中" }, { status: 400 });
   }
@@ -279,20 +285,20 @@ function handleLogin(
     return redirect(createProviderStartUrl(authBaseURL, provider, app.clientId, redirectURI).toString());
   }
 
-    return html(renderLoginPage({
-      allowDevLogin,
-      app,
-      appearance: options.appearance,
-      authBaseURL,
-      clientId: app.clientId,
-      error,
-      feishuEnabled: Boolean(options.feishu?.appId && options.feishu?.appSecret),
-      githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),
-      googleEnabled: Boolean(options.google?.clientId && options.google?.clientSecret),
-      loginPage: options.loginPage,
-      loginPageComponent: options.loginPageComponent,
-      redirectURI,
-    }));
+  return html(renderLoginPage({
+    allowDevLogin,
+    app,
+    appearance: options.appearance,
+    authBaseURL,
+    clientId: app.clientId,
+    error: loginError,
+    feishuEnabled: Boolean(options.feishu?.appId && options.feishu?.appSecret),
+    githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),
+    googleEnabled: Boolean(options.google?.clientId && options.google?.clientSecret),
+    loginPage: options.loginPage,
+    loginPageComponent: options.loginPageComponent,
+    redirectURI,
+  }));
 }
 
 function isHostedProvider(provider: string | null): provider is ProviderId {

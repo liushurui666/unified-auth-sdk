@@ -11,7 +11,6 @@ export { createHostedAuthService } from "./hosted-service/service.js";
 export { createFileAuthStore, createMemoryAuthStore } from "./hosted-service/store/index.js";
 export type {
   HostedAuthAppearance,
-  HostedAuthApplication,
   HostedAuthLoginPageComponent,
   HostedAuthLoginPageConfig,
   HostedAuthLoginPageModel,
