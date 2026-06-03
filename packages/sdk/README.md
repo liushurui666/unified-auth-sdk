@@ -133,31 +133,47 @@ pnpm dlx @rc-tool/unified-auth-hosted-service doctor
 | `AUTH_CLIENT_NAME` | 可选 | Hosted Login 页面展示的业务应用名称，例如 `AI PM`。 |
 | `AUTH_ALLOWED_REDIRECT_URI` | 必填 | 登录成功后允许回跳的地址，例如 `http://localhost:3004/`。 |
 
-### 登录页 UI 配置
+### 登录页 UI props
 
 登录页 UI 配置只在安装并使用 `@rc-tool/unified-auth-hosted-service` 时生效。core SDK 只负责生成登录地址和读取认证上下文，不渲染登录页。
 
-| 环境变量 | 是否必填 | 作用 |
-| --- | --- | --- |
-| `AUTH_LOGIN_BACKGROUND_URL` | 可选 | Hosted Login 背景图地址。可以是 CDN 图片、业务项目 public 目录图片的绝对 URL，或任何浏览器可访问的图片 URL。 |
-
-不配置 `AUTH_LOGIN_BACKGROUND_URL` 时，Hosted Login 会使用 SDK 自带的默认背景图。配置后需要在 route handler 里传给 `applications[].appearance.backgroundImageUrl`：
+Hosted Login 是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要在 route handler 里传 `loginPage` props：
 
 ```ts
 applications: [
   {
     allowedRedirectURIs: [resolveRedirectURI()],
-    appearance: {
-      backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
-    },
     clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
+    loginPage: {
+      backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+      brandName: "AI 项目管理平台",
+      heroTitle: "用企业账号安全登录",
+      panelTitle: "飞书登录",
+      primaryProvider: "feishu",
+      providers: ["feishu", "google", "github"],
+    },
     name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
     redirectURI: resolveRedirectURI(),
   },
 ],
 ```
 
-如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `appearance.backgroundImageUrl`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌背景。
+常用字段：
+
+| 字段 | 作用 |
+| --- | --- |
+| `backgroundImageUrl` | 背景图地址，不传时使用 SDK 默认背景。 |
+| `logoUrl` | 品牌图标地址，不传时使用 SDK 默认图标。 |
+| `brandName` | 左侧品牌名称。 |
+| `brandLabel` / `heroKicker` | 左侧标题上方的小标签。 |
+| `heroTitle` / `heroDescription` | 左侧主标题和说明文案。 |
+| `panelTitle` / `panelDescription` | 右侧登录面板标题和说明文案。 |
+| `primaryProvider` | 主按钮登录方式，可选 `feishu`、`google`、`github`。 |
+| `providers` | 登录方式展示顺序和范围，例如 `["feishu"]`。 |
+| `statusText` | 右上角状态标签，传空字符串可以隐藏。 |
+| `devLoginLabel` / `footerText` | 开发登录入口和底部文案。 |
+
+如果一个 Auth Service 服务多个业务应用，可以给每个 `applications[]` 单独配置不同的 `loginPage`，这样不同项目打开同一套 Hosted Auth 时也能显示自己的品牌 UI。
 
 ### Session 和存储配置
 
@@ -388,10 +404,15 @@ export const hostedAuth = createHostedAuthRouteHandlers({
   applications: [
     {
       allowedRedirectURIs: [resolveRedirectURI()],
-      appearance: {
-        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
-      },
       clientId: readEnv("AUTH_CLIENT_ID", "ai-pm"),
+      loginPage: {
+        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
+        brandName: readEnv("AUTH_CLIENT_NAME", "AI PM"),
+        heroTitle: "用飞书账号安全登录",
+        panelTitle: "飞书登录",
+        primaryProvider: "feishu",
+        providers: ["feishu", "google", "github"],
+      },
       name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
       redirectURI: resolveRedirectURI(),
     },

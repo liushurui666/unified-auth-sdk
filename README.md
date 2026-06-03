@@ -92,9 +92,9 @@ const loginURL = auth.getLoginURL({
 });
 ```
 
-## 应用与外观配置
+## 应用与登录页配置
 
-core SDK 的应用配置用于描述业务应用身份和登录入口偏好；当前 Hosted Login 的真实背景图配置由 `@rc-tool/unified-auth-hosted-service` 的 `appearance.backgroundImageUrl` 控制。
+core SDK 的应用配置用于描述业务应用身份和登录入口偏好；Hosted Login 的页面 UI 由 `@rc-tool/unified-auth-hosted-service` 的 `loginPage` props 控制。
 
 ```ts
 import type { AuthApplicationConfig } from "@rc-tool/unified-auth-sdk";
@@ -115,24 +115,23 @@ export const appConfig: AuthApplicationConfig = {
 };
 ```
 
-如果业务项目使用内嵌 Hosted Auth，可以在环境变量里配置登录页背景图：
-
-```dotenv
-AUTH_LOGIN_BACKGROUND_URL=https://cdn.example.com/auth/login-bg.jpg
-```
-
-并传给 hosted-service：
+如果业务项目使用内嵌 Hosted Auth，可以像给组件传 props 一样配置登录页：
 
 ```ts
 createHostedAuthRouteHandlers({
-  appearance: {
-    backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+  loginPage: {
+    backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
+    brandName: "AI 项目管理平台",
+    heroTitle: "用企业账号安全登录",
+    panelTitle: "飞书登录",
+    primaryProvider: "feishu",
+    providers: ["feishu", "google", "github"],
   },
   // ...
 });
 ```
 
-多个业务应用共用一套 Auth Service 时，也可以写到 `applications[].appearance.backgroundImageUrl`，按 `clientId` 分别展示不同背景图。
+多个业务应用共用一套 Auth Service 时，也可以写到 `applications[].loginPage`，按 `clientId` 分别展示不同品牌 UI。旧的 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐使用 `loginPage.backgroundImageUrl`。
 
 ## 内嵌 Hosted Auth 路由
 
@@ -147,8 +146,13 @@ export const hostedAuth = createHostedAuthRouteHandlers({
   applications: [
     {
       allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
-      appearance: {
+      loginPage: {
         backgroundImageUrl: process.env.AUTH_LOGIN_BACKGROUND_URL,
+        brandName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
+        heroTitle: "用企业账号安全登录",
+        panelTitle: "飞书登录",
+        primaryProvider: "feishu",
+        providers: ["feishu", "google", "github"],
       },
       clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
       name: process.env.AUTH_CLIENT_NAME ?? "AI PM",

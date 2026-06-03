@@ -1,27 +1,37 @@
 import { escapeHtml } from "./escape.js";
-import type { LoginPageLinks, LoginProviderView } from "./types.js";
+import type { LoginPageLinks, LoginProviderId, LoginProviderView } from "./types.js";
 
-export function renderBrand(appName: string) {
+export type LoginPageHeroContent = {
+  brandName: string;
+  heroDescription: string;
+  heroKicker: string;
+  heroTitle: string;
+  logoUrl?: string;
+};
+
+export function renderBrand(appName: string, logoUrl?: string) {
+  const mark = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" alt="" />`
+    : `<svg viewBox="0 0 32 32">
+          <path d="M13.7 4.8h9.2l-5.1 9.1h6.6L10.2 27.5l4.1-10.6H7.6L13.7 4.8z" fill="currentColor"/>
+        </svg>`;
+
   return `
     <div class="brand-row" aria-label="${escapeHtml(appName)}">
       <div class="mark" aria-hidden="true">
-        <svg viewBox="0 0 32 32">
-          <path d="M13.7 4.8h9.2l-5.1 9.1h6.6L10.2 27.5l4.1-10.6H7.6L13.7 4.8z" fill="currentColor"/>
-        </svg>
+        ${mark}
       </div>
       <div class="brand-title">${escapeHtml(appName)}</div>
     </div>`;
 }
 
-export function renderHero(appName: string, primaryProvider?: LoginProviderView) {
-  const provider = primaryProvider?.label ?? "统一账号";
-
+export function renderHero(content: LoginPageHeroContent) {
   return `
     <section class="hero-copy" aria-label="登录介绍">
-      ${renderBrand(appName)}
-      <div class="hero-kicker">统一认证中心</div>
-      <h1>用${escapeHtml(provider)}安全登录</h1>
-      <p>登录后将回到 ${escapeHtml(appName)}，继续处理你的工作事项。</p>
+      ${renderBrand(content.brandName, content.logoUrl)}
+      <div class="hero-kicker">${escapeHtml(content.heroKicker)}</div>
+      <h1>${escapeHtml(content.heroTitle)}</h1>
+      <p>${escapeHtml(content.heroDescription)}</p>
     </section>`;
 }
 
@@ -29,9 +39,11 @@ export function renderError(error?: string) {
   return error ? `<div class="error">${escapeHtml(error)}</div>` : "";
 }
 
-export function renderProviderList(providers: LoginProviderView[]) {
+export function renderProviderList(providers: LoginProviderView[], primaryProviderId?: LoginProviderId) {
   const enabledProviders = providers.filter((provider) => provider.enabled);
-  const primaryProvider = enabledProviders.find((provider) => provider.id === "feishu") ?? enabledProviders[0];
+  const primaryProvider = primaryProviderId
+    ? enabledProviders.find((provider) => provider.id === primaryProviderId) ?? enabledProviders[0]
+    : enabledProviders[0];
 
   if (!primaryProvider) {
     return `<div class="provider-empty">当前没有可用登录方式，请联系管理员完成 OAuth 配置。</div>`;
@@ -50,18 +62,24 @@ export function renderProviderList(providers: LoginProviderView[]) {
     </section>`;
 }
 
-export function renderDevLogin(allowDevLogin: boolean, links: LoginPageLinks) {
+export function renderDevLogin(allowDevLogin: boolean, links: LoginPageLinks, label = "使用开发账号进入") {
   if (!allowDevLogin) {
     return "";
   }
 
-  return `<a class="dev-link" href="${escapeHtml(links.devLogin)}">使用开发账号进入</a>`;
+  return `<a class="dev-link" href="${escapeHtml(links.devLogin)}">${escapeHtml(label)}</a>`;
 }
 
-export function renderFooter(clientId: string) {
+export function renderFooter(clientId: string, footerText?: string) {
+  if (footerText === "") {
+    return "";
+  }
+
+  const label = footerText ?? `client_id: ${clientId}`;
+
   return `
     <div class="footer-row">
-      <span>client_id: ${escapeHtml(clientId)}</span>
+      <span>${escapeHtml(label)}</span>
     </div>`;
 }
 

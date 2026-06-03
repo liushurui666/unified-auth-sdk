@@ -78,6 +78,61 @@ describe("hosted auth service", () => {
     expect(body).toContain("--auth-background-image: url(&#39;https://cdn.example.com/auth/login-bg.jpg&#39;)");
   });
 
+  it("configures the hosted login page through loginPage props", async () => {
+    const service = createHostedAuthService({
+      allowDevLogin: true,
+      applications: [
+        {
+          allowedRedirectURIs: ["https://app.example.com/"],
+          clientId: "workspace-app",
+          loginPage: {
+            backgroundImageUrl: "https://cdn.example.com/auth/component-bg.jpg",
+            brandLabel: "企业协作入口",
+            brandName: "AI 项目管理平台",
+            devLoginLabel: "使用开发身份进入",
+            footerText: "Powered by Unified Auth",
+            heroDescription: "统一身份校验后进入项目驾驶舱。",
+            heroTitle: "欢迎回到项目驾驶舱",
+            logoUrl: "https://cdn.example.com/auth/logo.png",
+            panelDescription: "使用企业授权账号完成登录。",
+            panelTitle: "用 GitHub 进入",
+            primaryProvider: "github",
+            providers: ["github"],
+            statusText: "企业 SSO",
+          },
+          name: "Workspace App",
+          redirectURI: "https://app.example.com/",
+        },
+      ],
+      authBaseURL: "https://auth.example.com",
+      feishu: {
+        appId: "feishu-client-id",
+        appSecret: "feishu-client-secret",
+      },
+      github: {
+        clientId: "github-client-id",
+        clientSecret: "github-client-secret",
+      },
+      sessionSecret: "test-secret",
+    });
+    const response = await service.handleLogin(
+      new Request("https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),
+    );
+    const body = await response.text();
+
+    expect(body).toContain("欢迎回到项目驾驶舱");
+    expect(body).toContain("统一身份校验后进入项目驾驶舱。");
+    expect(body).toContain("用 GitHub 进入");
+    expect(body).toContain("使用企业授权账号完成登录。");
+    expect(body).toContain("企业 SSO");
+    expect(body).toContain("使用开发身份进入");
+    expect(body).toContain("Powered by Unified Auth");
+    expect(body).toContain("src=\"https://cdn.example.com/auth/logo.png\"");
+    expect(body).toContain("--auth-background-image: url(&#39;https://cdn.example.com/auth/component-bg.jpg&#39;)");
+    expect(body).toContain("https://auth.example.com/api/auth/github/start?client_id=workspace-app");
+    expect(body).not.toContain("https://auth.example.com/api/auth/feishu/start?client_id=workspace-app");
+  });
+
   it("starts the GitHub OAuth web application flow", async () => {
     const response = await createService().handleGitHubStart(
       new Request("https://auth.example.com/api/auth/github/start?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F"),

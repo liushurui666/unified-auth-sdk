@@ -285,12 +285,13 @@ function handleLogin(
       appearance: options.appearance,
       authBaseURL,
       clientId: app.clientId,
-    error,
-    feishuEnabled: Boolean(options.feishu?.appId && options.feishu?.appSecret),
-    githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),
-    googleEnabled: Boolean(options.google?.clientId && options.google?.clientSecret),
-    redirectURI,
-  }));
+      error,
+      feishuEnabled: Boolean(options.feishu?.appId && options.feishu?.appSecret),
+      githubEnabled: Boolean(options.github?.clientId && options.github?.clientSecret),
+      googleEnabled: Boolean(options.google?.clientId && options.google?.clientSecret),
+      loginPage: options.loginPage,
+      redirectURI,
+    }));
 }
 
 function isHostedProvider(provider: string | null): provider is ProviderId {

@@ -1,6 +1,11 @@
-import type { HostedAuthAppearance, HostedAuthApplication } from "../types.js";
+import type {
+  HostedAuthAppearance,
+  HostedAuthApplication,
+  HostedAuthLoginPageConfig,
+  HostedAuthLoginProviderId,
+} from "../types.js";
 
-export type LoginProviderId = "feishu" | "github" | "google";
+export type LoginProviderId = HostedAuthLoginProviderId;
 
 export type LoginProviderView = {
   enabled: boolean;
@@ -26,5 +31,6 @@ export type RenderLoginPageParams = {
   feishuEnabled: boolean;
   githubEnabled: boolean;
   googleEnabled: boolean;
+  loginPage?: HostedAuthLoginPageConfig;
   redirectURI: string;
 };

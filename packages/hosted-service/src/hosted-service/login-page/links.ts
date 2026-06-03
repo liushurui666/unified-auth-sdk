@@ -1,6 +1,31 @@
 import { createProviderStartUrl } from "../applications.js";
 import { feishuIcon, githubIcon, googleIcon } from "./icons.js";
-import type { LoginPageLinks, LoginProviderView, RenderLoginPageParams } from "./types.js";
+import type { LoginPageLinks, LoginProviderId, LoginProviderView, RenderLoginPageParams } from "./types.js";
+import type { HostedAuthLoginPageConfig } from "../types.js";
+
+const defaultProviderOrder: LoginProviderId[] = ["feishu", "google", "github"];
+
+const providerDefinitions: Record<LoginProviderId, {
+  icon: string;
+  iconClassName: string;
+  label: string;
+}> = {
+  feishu: {
+    icon: feishuIcon,
+    iconClassName: "provider-icon-feishu",
+    label: "飞书",
+  },
+  github: {
+    icon: githubIcon,
+    iconClassName: "provider-icon-github",
+    label: "GitHub",
+  },
+  google: {
+    icon: googleIcon,
+    iconClassName: "provider-icon-google",
+    label: "Google",
+  },
+};
 
 function createDevLoginUrl(params: RenderLoginPageParams) {
   const devUrl = new URL("/api/auth/dev-login", params.authBaseURL);
@@ -15,12 +40,11 @@ function createProvider(params: {
   authBaseURL: string;
   clientId: string;
   enabled: boolean;
-  icon: string;
-  iconClassName: string;
   id: LoginProviderView["id"];
-  label: string;
   redirectURI: string;
 }): LoginProviderView {
+  const provider = providerDefinitions[params.id];
+
   return {
     enabled: params.enabled,
     href: createProviderStartUrl(
@@ -29,41 +53,35 @@ function createProvider(params: {
       params.clientId,
       params.redirectURI,
     ).toString(),
-    icon: params.icon,
-    iconClassName: params.iconClassName,
+    icon: provider.icon,
+    iconClassName: provider.iconClassName,
     id: params.id,
-    label: params.label,
+    label: provider.label,
   };
 }
 
-export function createLoginPageLinks(params: RenderLoginPageParams): LoginPageLinks {
+function getProviderEnabled(params: RenderLoginPageParams, provider: LoginProviderId) {
+  if (provider === "feishu") return params.feishuEnabled;
+  if (provider === "github") return params.githubEnabled;
+  return params.googleEnabled;
+}
+
+function getProviderOrder(providers?: LoginProviderId[]) {
+  const ordered = providers?.length ? providers : defaultProviderOrder;
+
+  return ordered.filter((provider, index) => ordered.indexOf(provider) === index);
+}
+
+export function createLoginPageLinks(
+  params: RenderLoginPageParams,
+  loginPage?: HostedAuthLoginPageConfig,
+): LoginPageLinks {
   return {
     devLogin: createDevLoginUrl(params),
-    providers: [
-      createProvider({
-        ...params,
-        enabled: params.feishuEnabled,
-        icon: feishuIcon,
-        iconClassName: "provider-icon-feishu",
-        id: "feishu",
-        label: "飞书",
-      }),
-      createProvider({
-        ...params,
-        enabled: params.googleEnabled,
-        icon: googleIcon,
-        iconClassName: "provider-icon-google",
-        id: "google",
-        label: "Google",
-      }),
-      createProvider({
-        ...params,
-        enabled: params.githubEnabled,
-        icon: githubIcon,
-        iconClassName: "provider-icon-github",
-        id: "github",
-        label: "GitHub",
-      }),
-    ],
+    providers: getProviderOrder(loginPage?.providers).map((provider) => createProvider({
+      ...params,
+      enabled: getProviderEnabled(params, provider),
+      id: provider,
+    })),
   };
 }

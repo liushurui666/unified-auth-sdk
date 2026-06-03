@@ -29,6 +29,7 @@ a { min-height: 44px; display: flex; align-items: center; justify-content: cente
   background: linear-gradient(135deg, #4f8cff 0%, #22d4b8 100%); color: #fff; box-shadow: 0 16px 32px rgb(34 211 238 / 18%);
 }
 .mark svg { width: 30px; height: 30px; display: block; }
+.mark img { width: 100%; height: 100%; display: block; border-radius: inherit; object-fit: cover; }
 .brand-title {
   display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 6px;
   background: rgb(15 23 42 / 48%); color: #bfdbfe; font-size: 14px; font-weight: 700;

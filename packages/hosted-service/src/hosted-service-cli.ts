@@ -15,6 +15,10 @@ function readEnv(name: string, fallback = "") {
   return process.env[name]?.trim() || fallback;
 }
 
+function readOptionalEnv(name: string) {
+  return readEnv(name) || undefined;
+}
+
 const port = Number(readEnv("AUTH_SERVICE_PORT", readEnv("PORT", "3005")));
 const authBaseURL = readEnv("AUTH_SERVICE_URL", `http://localhost:${port}`);
 const clientId = readEnv("AUTH_CLIENT_ID", "ai-pm");
@@ -75,9 +79,6 @@ const server = createHostedAuthNodeServer({
   applications: [
     {
       allowedRedirectURIs: [redirectURI],
-      appearance: {
-        backgroundImageUrl: readEnv("AUTH_LOGIN_BACKGROUND_URL") || undefined,
-      },
       clientId,
       name: readEnv("AUTH_CLIENT_NAME", "AI PM"),
       redirectURI,
@@ -99,6 +100,17 @@ const server = createHostedAuthNodeServer({
     clientId: readEnv("GITHUB_CLIENT_ID") || undefined,
     clientSecret: readEnv("GITHUB_CLIENT_SECRET") || undefined,
     redirectURI: readEnv("GITHUB_REDIRECT_URI") || undefined,
+  },
+  loginPage: {
+    backgroundImageUrl: readOptionalEnv("AUTH_LOGIN_BACKGROUND_URL"),
+    brandLabel: readOptionalEnv("AUTH_LOGIN_BRAND_LABEL"),
+    brandName: readOptionalEnv("AUTH_LOGIN_BRAND_NAME"),
+    heroDescription: readOptionalEnv("AUTH_LOGIN_HERO_DESCRIPTION"),
+    heroTitle: readOptionalEnv("AUTH_LOGIN_HERO_TITLE"),
+    logoUrl: readOptionalEnv("AUTH_LOGIN_LOGO_URL"),
+    panelDescription: readOptionalEnv("AUTH_LOGIN_PANEL_DESCRIPTION"),
+    panelTitle: readOptionalEnv("AUTH_LOGIN_PANEL_TITLE"),
+    statusText: readOptionalEnv("AUTH_LOGIN_STATUS_TEXT"),
   },
   sessionSecret,
   store: await createAuthStore(),
