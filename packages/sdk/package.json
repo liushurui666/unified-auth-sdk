@@ -1,6 +1,6 @@
 {
   "name": "@rc-tool/unified-auth-sdk",
-  "version": "0.2.9",
+  "version": "0.3.1",
   "type": "module",
   "description": "Lightweight client SDK for Unified Auth hosted services.",
   "main": "./dist/index.js",
@@ -37,6 +37,10 @@
       "types": "./dist/server.d.ts",
       "import": "./dist/server.js"
     },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
+    },
     "./sign-in": {
       "types": "./dist/sign-in.d.ts",
       "import": "./dist/sign-in.js"
@@ -53,7 +57,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
-    "better-auth": "^1.6.10",
+    "better-auth": "^1.6.14",
     "drizzle-orm": "^0.45.2 || ^1.0.0-rc.1",
     "react": ">=18"
   },

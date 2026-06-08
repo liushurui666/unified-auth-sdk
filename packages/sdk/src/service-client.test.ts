@@ -37,4 +37,37 @@ describe("auth service client", () => {
       "https://auth.example.com/api/auth/me?client_id=workspace-app",
     );
   });
+
+  it("can derive client config from runtime env", () => {
+    const client = createAuthServiceClient({
+      env: {
+        AUTH_ALLOWED_REDIRECT_URI: "https://app.example.com/",
+        AUTH_CLIENT_ID: "workspace-app",
+        AUTH_SERVICE_URL: "https://auth.example.com",
+      },
+    });
+
+    expect(client.getLoginURL()).toBe(
+      "https://auth.example.com/login?client_id=workspace-app&redirect_uri=https%3A%2F%2Fapp.example.com%2F",
+    );
+  });
+
+  it("can derive client config from unified auth config", () => {
+    const client = createAuthServiceClient({
+      config: {
+        app: {
+          id: "workspace-app",
+          origin: "https://app.example.com",
+          redirectURI: "https://app.example.com/",
+        },
+        auth: {
+          origin: "https://auth.example.com",
+        },
+      },
+    });
+
+    expect(client.getLoginURL({ provider: "github" })).toBe(
+      "https://auth.example.com/login?client_id=workspace-app&provider=github&redirect_uri=https%3A%2F%2Fapp.example.com%2F",
+    );
+  });
 });

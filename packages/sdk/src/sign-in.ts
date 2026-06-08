@@ -1,4 +1,4 @@
-import { toAbsoluteUrl } from "./redirect";
+import { toAbsoluteUrl } from "./redirect.js";
 
 export type AuthCallResult = Promise<{ error?: { message?: string | null } | null }>;
 

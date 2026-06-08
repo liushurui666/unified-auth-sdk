@@ -1,5 +1,5 @@
-import { createAuthServer } from "./server";
-import type { AuthServer, CreateAuthServerOptions } from "./server";
+import { createAuthServer } from "./server.js";
+import type { AuthServer, CreateAuthServerOptions } from "./server.js";
 
 export type NextAuthRouteHandler = (
   request: Request,
