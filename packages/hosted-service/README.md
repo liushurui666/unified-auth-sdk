@@ -1,23 +1,39 @@
 # @rc-tool/unified-auth-hosted-service
 
-Hosted Auth runtime for Unified Auth.
+Hosted Login runtime for Unified Auth. This package is Better Auth-only: it renders the SDK login page, starts provider sign-in through Better Auth, exposes SDK context/session/user endpoints, and passes the rest of `/api/auth/*` directly to `auth.handler`.
 
-Use this package to mount SDK-provided login pages, OAuth routes, session APIs, file/memory stores, and the `unified-auth` CLI.
+It does not ship a file store, memory store, custom OAuth callback implementation, custom session cookie, or standalone auth database adapter.
 
 ## Install
 
 ```bash
-pnpm add @rc-tool/unified-auth-sdk @rc-tool/unified-auth-hosted-service
+pnpm add @rc-tool/unified-auth-sdk @rc-tool/unified-auth-hosted-service better-auth drizzle-orm
 ```
 
 ## Next.js Embedded Routes
 
 ```ts
 import {
-  createFileAuthStore,
+  createHostedAuthRouteHandlers,
+} from "@rc-tool/unified-auth-hosted-service";
+import { auth } from "@/lib/auth/server";
+import config from "@/unified-auth.config";
+
+export const hostedAuth = createHostedAuthRouteHandlers({
+  auth,
+  config,
+});
+```
+
+Customize the hosted login page only when the default page is not enough:
+
+```ts
+import {
   createHostedAuthLoginPageComponent,
   createHostedAuthRouteHandlers,
 } from "@rc-tool/unified-auth-hosted-service";
+import { auth } from "@/lib/auth/server";
+import config from "@/unified-auth.config";
 
 const LoginPage = createHostedAuthLoginPageComponent({
   backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
@@ -29,17 +45,9 @@ const LoginPage = createHostedAuthLoginPageComponent({
 });
 
 export const hostedAuth = createHostedAuthRouteHandlers({
-  allowDevLogin: process.env.AUTH_ALLOW_DEV_LOGIN !== "false",
-  allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
-  appName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
-  authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
-  clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
+  auth,
+  config,
   loginPageComponent: LoginPage,
-  redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
-  sessionSecret: process.env.AUTH_SESSION_SECRET!,
-  store: createFileAuthStore({
-    filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
-  }),
 });
 ```
 
@@ -49,100 +57,62 @@ export { GET } from "@/lib/hosted-auth";
 ```
 
 ```ts
+// app/logout/route.ts
+export { GET } from "@/lib/hosted-auth";
+```
+
+```ts
 // app/api/auth/[...auth]/route.ts
 export { GET, POST } from "@/lib/hosted-auth";
 ```
 
-## CLI
-
-```bash
-pnpm dlx @rc-tool/unified-auth-hosted-service init --app ai-pm --redirect http://localhost:3004/
-pnpm dlx @rc-tool/unified-auth-hosted-service doctor
-```
-
-The default store is file-based. Install `@rc-tool/unified-auth-prisma-store` only when `AUTH_STORE_PROVIDER=prisma`.
-
-## 配置信息
-
-`@rc-tool/unified-auth-hosted-service` 负责在业务项目里挂载登录页和 `/api/auth/*` 路由。业务项目需要把下面这些配置放进自己的 `.env.local` / `.env.example`，也可以通过 CLI 自动追加缺失项：
-
-```bash
-pnpm dlx @rc-tool/unified-auth-hosted-service init --app ai-pm --redirect http://localhost:3004/
-```
-
-### 登录页组件
-
-Hosted Auth 登录页是 SDK 内部组件化渲染的黑盒页面。业务方不需要自己拼 OAuth 链接、state、callback 或 session，只需要把 SDK 提供的登录页组件传给 `loginPageComponent`。如果不传组件，SDK 会使用内置默认组件和预设样式。
-
-推荐写法：
+## Better Auth Server
 
 ```ts
-import {
-  createFileAuthStore,
-  createHostedAuthLoginPageComponent,
-  createHostedAuthRouteHandlers,
-} from "@rc-tool/unified-auth-hosted-service";
+import { createAuthServer } from "@rc-tool/unified-auth-sdk/server";
+import { db } from "@/db";
+import config from "@/unified-auth.config";
 
-const LoginPage = createHostedAuthLoginPageComponent({
-  backgroundImageUrl: "https://cdn.example.com/auth/login-bg.jpg",
-  brandLabel: "企业协作入口",
-  brandName: "AI 项目管理平台",
-  devLoginLabel: "使用开发身份进入",
-  footerText: "Powered by Unified Auth",
-  heroDescription: "统一身份校验后进入项目驾驶舱。",
-  heroTitle: "欢迎回到项目驾驶舱",
-  logoUrl: "https://cdn.example.com/auth/logo.png",
-  panelDescription: "使用企业授权账号完成登录。",
-  panelTitle: "用飞书账号登录",
-  primaryProvider: "feishu",
-  providers: ["feishu", "google", "github"],
-  statusText: "企业 SSO",
-});
-
-export const hostedAuth = createHostedAuthRouteHandlers({
-  allowedRedirectURIs: [process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/"],
-  appName: process.env.AUTH_CLIENT_NAME ?? "AI PM",
-  authBaseURL: process.env.AUTH_SERVICE_URL ?? "http://localhost:3004",
-  clientId: process.env.AUTH_CLIENT_ID ?? "ai-pm",
-  loginPageComponent: LoginPage,
-  redirectURI: process.env.AUTH_ALLOWED_REDIRECT_URI ?? "http://localhost:3004/",
-  sessionSecret: process.env.AUTH_SESSION_SECRET!,
-  store: createFileAuthStore({
-    filePath: process.env.AUTH_STORE_FILE ?? ".auth/unified-auth-store.json",
-  }),
+export const auth = createAuthServer({
+  config,
+  database: db,
 });
 ```
 
-组件配置项：
+`createHostedAuthRouteHandlers` reads app id, display name, origin, redirect URI, provider visibility, and realm from `unified-auth.config.ts`. OAuth state, callback verification, account binding, session persistence, cookie refresh, and sign-out are all delegated to Better Auth.
 
-| 字段 | 作用 |
-| --- | --- |
-| `backgroundImageUrl` | 登录页背景图地址。可以是 CDN、业务项目 public 图片的绝对 URL，或任何浏览器可访问的图片。 |
-| `logoUrl` | 左侧品牌图标。未配置时使用 SDK 默认闪电标识。 |
-| `brandName` | 左侧品牌名称，默认取应用 `name`。 |
-| `brandLabel` / `heroKicker` | 左侧标题上方的小标签。 |
-| `heroTitle` | 左侧主标题。 |
-| `heroDescription` | 左侧说明文案。 |
-| `panelTitle` | 右侧登录面板标题。 |
-| `panelDescription` | 右侧登录面板说明。 |
-| `primaryProvider` | 主按钮登录方式，可选 `feishu`、`google`、`github`。 |
-| `providers` | 登录方式展示顺序和范围，例如只展示 `["feishu"]`。未配置时展示全部已启用 provider。 |
-| `statusText` | 右上角状态标签，传空字符串可以隐藏。 |
-| `devLoginLabel` | 开发登录入口文案。 |
-| `footerText` | 底部说明文案，传空字符串可以隐藏。 |
+## Provider Routing
 
-业务侧不需要配置多应用数组。内嵌 Hosted Auth 的定位是“当前业务项目自己挂登录页和 `/api/auth/*`”，因此一个项目只需要在 `createHostedAuthRouteHandlers` 上传当前项目的 `clientId`、`appName`、`redirectURI`、`allowedRedirectURIs` 和 `loginPageComponent`。
+Login page provider links point at SDK start routes:
 
-登录页组件的配置优先级是：
+- `/api/auth/feishu/start`
+- `/api/auth/google/start`
+- `/api/auth/github/start`
 
-1. `createHostedAuthRouteHandlers({ loginPageComponent })`
-2. SDK 默认登录页组件
+Those routes call Better Auth with `disableRedirect: true`, then forward the returned provider URL to the browser.
 
-旧的 `loginPage` 和 `appearance.backgroundImageUrl` 仍然兼容，但新项目推荐用 `loginPageComponent`。
+Remaining Better Auth routes are passed through unchanged, so provider consoles should use Better Auth standard callback paths:
 
-独立 Auth Service 启动器不读取 `AUTH_LOGIN_*` 这类全局样式环境变量；后续如果要做共享域名的独立服务，样式会走服务侧自己的应用配置入口，不要求业务项目在 SDK 接入代码里维护应用数组。
+- Feishu generic OAuth: `/api/auth/oauth2/callback/feishu`
+- Google: `/api/auth/callback/google`
+- GitHub: `/api/auth/callback/github`
 
-也可以完全自定义组件，但组件只拿 SDK 生成好的 `model`，不需要接触 secret、state 签名、callback 或 session：
+If your Better Auth provider id differs from the visible login provider id, map it explicitly:
+
+```ts
+createHostedAuthRouteHandlers({
+  auth,
+  config,
+  authProviders: {
+    feishu: { providerId: "feishu-primary" },
+    github: { scopes: ["read:user", "user:email"] },
+  },
+});
+```
+
+## Login Page Component
+
+Hosted Login is a server-rendered component. Custom components receive only the SDK-generated model; they do not need OAuth secrets, state, sessions, or database access.
 
 ```ts
 const LoginPage = ({ model }) => {
@@ -156,37 +126,62 @@ const LoginPage = ({ model }) => {
 };
 ```
 
-### 业务应用配置
+Default component config:
 
-| 环境变量 | 作用 |
+| Field | Purpose |
 | --- | --- |
-| `AUTH_SERVICE_URL` | Auth Service 地址。内嵌模式通常就是业务项目自己的 origin。 |
-| `AUTH_CLIENT_ID` | 当前业务应用 id，例如 `ai-pm`。 |
-| `AUTH_CLIENT_NAME` | 登录页展示名称，例如 `AI PM`。 |
-| `AUTH_ALLOWED_REDIRECT_URI` | 登录成功后允许回跳的地址。 |
+| `backgroundImageUrl` | Login page background image URL. |
+| `logoUrl` | Brand logo URL. |
+| `brandName` | Brand/application name. |
+| `brandLabel` / `heroKicker` | Small hero label. |
+| `heroTitle` / `heroDescription` | Hero title and copy. |
+| `panelTitle` / `panelDescription` | Login panel title and copy. |
+| `primaryProvider` | Primary provider: `feishu`, `google`, or `github`. |
+| `providers` | Visible provider order and subset. |
+| `statusText` | Top-right status label; pass `""` to hide. |
+| `footerText` | Footer copy; pass `""` to hide. |
 
-### Session 和 Store 配置
+## CLI
 
-| 环境变量 | 作用 |
-| --- | --- |
-| `AUTH_SESSION_SECRET` | session cookie 签名密钥，CLI 会自动生成。 |
-| `AUTH_ALLOW_DEV_LOGIN` | 是否允许开发账号登录，生产环境建议设置为 `false`。 |
-| `AUTH_STORE_PROVIDER` | 认证数据存储方式，默认 `file`，可选 `prisma`。 |
-| `AUTH_STORE_FILE` | file store 的 JSON 文件路径，默认 `.auth/unified-auth-store.json`。 |
-| `AUTH_DATABASE_URL` | Prisma store 的认证库 PostgreSQL 连接串。 |
+Create `unified-auth.config.ts` in the business project:
 
-### OAuth Provider 配置
+```ts
+import { defineUnifiedAuthConfig } from "@rc-tool/unified-auth-hosted-service/config";
 
-| Provider | 环境变量 |
-| --- | --- |
-| 飞书 | `FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_REDIRECT_URI` |
-| Google | `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`GOOGLE_REDIRECT_URI` |
-| GitHub | `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`GITHUB_REDIRECT_URI` |
-
-内嵌模式下 callback 一般挂在业务项目自己的 `/api/auth/*` 路由：
-
-```env
-FEISHU_REDIRECT_URI=http://localhost:3004/api/auth/feishu/callback
-GOOGLE_REDIRECT_URI=http://localhost:3004/api/auth/google/callback
-GITHUB_REDIRECT_URI=http://localhost:3004/api/auth/github/callback
+export default defineUnifiedAuthConfig({
+  app: {
+    id: "ai-pm",
+    name: "AI PM",
+    origin: "http://localhost:3004",
+    redirectURI: "http://localhost:3004/",
+  },
+  auth: {
+    origin: "http://localhost:3004",
+    secret: () => process.env.BETTER_AUTH_SECRET,
+  },
+  database: {
+    url: () => process.env.DATABASE_URL,
+  },
+  providers: ["feishu", "google", "github"],
+  realm: "ai-pm",
+});
 ```
+
+First-time setup creates the config file if it is missing. The CLI reads `unified-auth.config.ts` and does not generate env files:
+
+```bash
+pnpm dlx @rc-tool/unified-auth-hosted-service init
+```
+
+Prepare the auth database and verify the project:
+
+```bash
+pnpm dlx @rc-tool/unified-auth-hosted-service db migrate
+pnpm dlx @rc-tool/unified-auth-hosted-service doctor
+```
+
+`db migrate` is safe to run repeatedly in CI/CD. It does not require migration records: it compares the real PostgreSQL schema, tables, columns, indexes, and constraints for the configured `realm`, creates compatible missing pieces, and fails on incompatible existing structure.
+
+`doctor` checks the config, database connectivity, selected auth schema, required Better Auth tables, indexes, and constraints.
+
+`realm` selects the auth table namespace. For example, `a` maps to PostgreSQL schema `auth_a`; multiple business projects can share that realm, while another project can use `b` and stay isolated in `auth_b`.
