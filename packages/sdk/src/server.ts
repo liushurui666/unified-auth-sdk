@@ -8,6 +8,7 @@ import type { FeishuOAuthProviderOptions } from "./providers/feishu.js";
 type BetterAuthOptions = Parameters<typeof betterAuth>[0];
 type DrizzleDatabase = Parameters<typeof drizzleAdapter>[0];
 type DrizzleConfig = Parameters<typeof drizzleAdapter>[1];
+type SocialProviders = NonNullable<BetterAuthOptions["socialProviders"]>;
 type AuthServerConfigValue<T> = T | (() => T | undefined);
 
 export interface AuthServiceEnv {
@@ -42,15 +43,17 @@ export interface AuthServerConfig {
   realm?: string;
 }
 
-export interface GitHubProviderOptions {
-  clientId: string;
-  clientSecret: string;
-}
+type BetterAuthSocialProviderOptions<Provider extends keyof SocialProviders> = NonNullable<SocialProviders[Provider]>;
 
-export interface GoogleProviderOptions {
+export type GitHubProviderOptions = BetterAuthSocialProviderOptions<"github"> & {
   clientId: string;
   clientSecret: string;
-}
+};
+
+export type GoogleProviderOptions = BetterAuthSocialProviderOptions<"google"> & {
+  clientId: string;
+  clientSecret: string;
+};
 
 export interface CreateAuthServerOptions {
   advanced?: BetterAuthOptions["advanced"];
