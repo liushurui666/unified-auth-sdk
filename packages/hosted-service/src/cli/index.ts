@@ -1,11 +1,14 @@
-import { doctorAuthEnv, initAuthEnv } from "./env.js";
-import type { DoctorCheck, InitAuthEnvOptions } from "./env.js";
+import { loadUnifiedAuthConfig } from "./config-file.js";
+import { doctorUnifiedAuthConfig, initUnifiedAuthConfig } from "./config.js";
+import { doctorUnifiedAuthDatabase, migrateUnifiedAuthDatabase } from "./database.js";
+import type { DoctorCheck } from "./config.js";
 
 type Output = Pick<typeof console, "error" | "log">;
 
 interface ParsedArgs {
   command: string;
   flags: Map<string, string | true>;
+  subcommand?: string;
 }
 
 const helpText = `Unified Auth CLI
@@ -13,22 +16,15 @@ const helpText = `Unified Auth CLI
 Usage:
   unified-auth init [options]
   unified-auth doctor [options]
+  unified-auth db migrate [options]
 
 Options:
-  --app <id>             Auth client id. Defaults to the current folder name.
-  --name <name>          Display name for the auth application.
-  --port <port>          Local auth service port. Defaults to 3005.
-  --service-url <url>    Auth service base URL. Defaults to http://localhost:<port>.
-  --redirect <url>       Allowed app redirect URI. Defaults to http://localhost:3004/.
-  --providers <list>     Comma-separated providers: feishu,google,github.
-  --store <provider>     Store provider: file or prisma. Defaults to file.
-  --env-file <path>      Env file to update. Defaults to .env.local.
-  --example-file <path>  Example env file to update. Defaults to .env.example.
+  --config <path>        Config file. Defaults to unified-auth.config.ts.
   --cwd <path>           Project directory. Defaults to the current directory.
   --help                 Show this help message.
 `;
 
-export function runCli(argv: string[], output: Output = console) {
+export async function runCli(argv: string[], output: Output = console) {
   const args = parseArgs(argv);
 
   try {
@@ -37,26 +33,52 @@ export function runCli(argv: string[], output: Output = console) {
       return 0;
     }
     if (args.command === "init") {
-      const result = initAuthEnv(toInitOptions(args.flags));
+      const cwd = readString(args.flags, "cwd") ?? process.cwd();
+      const result = initUnifiedAuthConfig({
+        configPath: readString(args.flags, "config"),
+        cwd,
+      });
 
-      output.log("Unified Auth env initialized.");
-      printWriteSummary(output, ".env.local", result.env);
-      printWriteSummary(output, ".env.example", result.example);
-      printWriteSummary(output, ".gitignore", result.gitignore);
-      output.log("Run unified-auth doctor to verify the project config.");
+      output.log(result.created ? "Unified Auth config created." : "Unified Auth config already exists.");
+      output.log(`Config: ${result.path}`);
+      output.log("Optional: run unified-auth doctor to verify the project config.");
       return 0;
     }
     if (args.command === "doctor") {
-      const result = doctorAuthEnv({
-        cwd: readString(args.flags, "cwd"),
-        envFile: readString(args.flags, "env-file"),
-      });
+      const cwd = readString(args.flags, "cwd") ?? process.cwd();
+      const loaded = await loadUnifiedAuthConfig(cwd, readString(args.flags, "config"));
+      const result = doctorUnifiedAuthConfig(loaded.config, loaded.path);
+
+      if (loaded.config?.database?.url) {
+        result.checks.push(...await doctorUnifiedAuthDatabase(loaded.config));
+        result.ok = !result.checks.some((check) => check.status === "fail");
+      }
 
       for (const check of result.checks) {
         output.log(formatCheck(check));
       }
 
       return result.ok ? 0 : 1;
+    }
+    if (args.command === "db" && args.subcommand === "migrate") {
+      const cwd = readString(args.flags, "cwd") ?? process.cwd();
+      const loaded = await loadUnifiedAuthConfig(cwd, readString(args.flags, "config"));
+
+      if (!loaded.config) {
+        output.error("unified-auth.config.ts is missing; run unified-auth init");
+        return 1;
+      }
+
+      const result = await migrateUnifiedAuthDatabase(loaded.config);
+
+      output.log(result.changed ? "Unified Auth database migrated." : "Unified Auth database already up to date.");
+      output.log(`Schema: ${result.schemaName}`);
+
+      for (const action of result.actions) {
+        output.log(`- ${action.label}`);
+      }
+
+      return 0;
     }
 
     output.error(`Unknown command: ${args.command}`);
@@ -71,12 +93,17 @@ export function runCli(argv: string[], output: Output = console) {
 function parseArgs(argv: string[]): ParsedArgs {
   const flags = new Map<string, string | true>();
   let command = "";
+  let subcommand = "";
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
     if (!arg.startsWith("--")) {
-      command ||= arg;
+      if (!command) {
+        command = arg;
+      } else if (!subcommand) {
+        subcommand = arg;
+      }
       continue;
     }
 
@@ -99,85 +126,13 @@ function parseArgs(argv: string[]): ParsedArgs {
     index += 1;
   }
 
-  return { command, flags };
-}
-
-function toInitOptions(flags: Map<string, string | true>): InitAuthEnvOptions {
-  return {
-    app: readString(flags, "app"),
-    cwd: readString(flags, "cwd"),
-    envFile: readString(flags, "env-file"),
-    exampleFile: readString(flags, "example-file"),
-    name: readString(flags, "name"),
-    port: readNumber(flags, "port"),
-    providers: readProviders(flags),
-    redirectURI: readString(flags, "redirect"),
-    serviceURL: readString(flags, "service-url"),
-    store: readStore(flags),
-  };
+  return { command, flags, subcommand };
 }
 
 function readString(flags: Map<string, string | true>, name: string) {
   const value = flags.get(name);
 
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function readNumber(flags: Map<string, string | true>, name: string) {
-  const value = readString(flags, name);
-
-  if (!value) {
-    return undefined;
-  }
-
-  const parsed = Number(value);
-
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`--${name} must be a positive integer.`);
-  }
-
-  return parsed;
-}
-
-function readProviders(flags: Map<string, string | true>) {
-  const value = readString(flags, "providers");
-
-  if (!value) {
-    return undefined;
-  }
-
-  const providers = value.split(",").map((provider) => provider.trim()).filter(Boolean);
-  const allowed = new Set(["feishu", "github", "google"]);
-
-  for (const provider of providers) {
-    if (!allowed.has(provider)) {
-      throw new Error(`Unsupported provider: ${provider}`);
-    }
-  }
-
-  return providers as Array<"feishu" | "github" | "google">;
-}
-
-function readStore(flags: Map<string, string | true>) {
-  const value = readString(flags, "store");
-
-  if (!value) {
-    return undefined;
-  }
-  if (value === "file" || value === "prisma") {
-    return value;
-  }
-
-  throw new Error(`Unsupported store provider: ${value}`);
-}
-
-function printWriteSummary(output: Output, label: string, summary: { added: string[]; path: string; updated: string[] }) {
-  const changes = [
-    summary.added.length ? `${summary.added.length} added` : "",
-    summary.updated.length ? `${summary.updated.length} updated` : "",
-  ].filter(Boolean).join(", ") || "already up to date";
-
-  output.log(`${label}: ${changes} (${summary.path})`);
 }
 
 function formatCheck(check: DoctorCheck) {
