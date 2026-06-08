@@ -1,6 +1,5 @@
 import {
   type LoginPageHeroContent,
-  renderDevLogin,
   renderError,
   renderFooter,
   renderHero,
@@ -19,7 +18,6 @@ import type {
 import type { HostedAuthLoginPageConfig } from "../types.js";
 
 type LoginPageContent = LoginPageHeroContent & {
-  devLoginLabel?: string;
   footerText?: string;
   panelDescription: string;
   panelKicker: string;
@@ -29,7 +27,7 @@ type LoginPageContent = LoginPageHeroContent & {
 
 export function renderLoginPage(params: RenderLoginPageParams) {
   const component = params.app.loginPageComponent ?? params.loginPageComponent ?? defaultHostedAuthLoginPageComponent;
-  const loginPage = mergeLoginPageConfig(component.defaultConfig ?? {}, resolveLoginPageConfig(params));
+  const loginPage = component.defaultConfig ?? {};
 
   return component({
     config: loginPage,
@@ -69,7 +67,6 @@ export const defaultHostedAuthLoginPageComponent: LoginPageComponent = (props: L
       <p>${escapeHtml(content.panelDescription)}</p>
       ${renderError(props.model.error)}
       ${renderProviderList(props.model.providers, props.config.primaryProvider)}
-      ${renderDevLogin(props.model.allowDevLogin, props.model.devLoginHref, content.devLoginLabel)}
       ${renderFooter(props.model.clientId, content.footerText)}
     </section>
   </main>`,
@@ -84,27 +81,11 @@ function createLoginPageModel(
   const links = createLoginPageLinks(params, loginPage);
 
   return {
-    allowDevLogin: params.allowDevLogin,
     appName: params.app.name ?? params.clientId,
     clientId: params.clientId,
-    devLoginHref: links.devLogin,
     error: params.error,
     providers: links.providers,
     redirectURI: params.redirectURI,
-  };
-}
-
-function resolveLoginPageConfig(params: RenderLoginPageParams): HostedAuthLoginPageConfig {
-  const serviceLoginPage = params.loginPage ?? {};
-  const appLoginPage = params.app.loginPage ?? {};
-
-  return {
-    ...serviceLoginPage,
-    ...appLoginPage,
-    backgroundImageUrl: appLoginPage.backgroundImageUrl
-      ?? params.app.appearance?.backgroundImageUrl
-      ?? serviceLoginPage.backgroundImageUrl
-      ?? params.appearance?.backgroundImageUrl,
   };
 }
 
@@ -140,7 +121,6 @@ function resolveLoginPageContent(
 
   return {
     brandName,
-    devLoginLabel: loginPage.devLoginLabel,
     footerText: loginPage.footerText,
     heroDescription: loginPage.heroDescription ?? `登录后将回到 ${appName}，继续处理你的工作事项。`,
     heroKicker: loginPage.heroKicker ?? loginPage.brandLabel ?? "统一认证中心",

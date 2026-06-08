@@ -68,8 +68,6 @@ h2 { margin: 0 0 14px; color: #f8fafc; font-size: 26px; line-height: 1.25; font-
 .provider-icon-github { background: #0b1120; color: #fff; }
 .provider-name { max-width: 100%; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .provider-empty { border: 1px solid rgb(251 191 36 / 24%); color: #fde68a; background: rgb(120 53 15 / 28%); border-radius: 6px; padding: 12px 14px; line-height: 1.6; font-size: 14px; }
-.dev-link { min-height: 42px; margin-top: 12px; border: 1px solid rgb(148 163 184 / 16%); background: rgb(15 23 42 / 48%); color: #cbd5e1; font-size: 13px; }
-.dev-link:hover { border-color: rgb(148 163 184 / 34%); background: rgb(30 41 59 / 72%); }
 .error { border: 1px solid rgb(248 113 113 / 36%); color: #fecaca; background: rgb(127 29 29 / 34%); border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; }
 .footer-row { margin-top: 18px; color: #64748b; font-size: 12px; }
 @media (max-width: 780px) {

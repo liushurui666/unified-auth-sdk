@@ -45,23 +45,11 @@ export async function handleHostedAuthRequest(
   if (path === "/api/auth/context") {
     return service.handleContext(request);
   }
-  if (path === "/api/auth/dev-login") {
-    return service.handleDevLogin(request);
-  }
-  if (path === "/api/auth/feishu/callback") {
-    return service.handleFeishuCallback(request);
-  }
   if (path === "/api/auth/feishu/start") {
     return service.handleFeishuStart(request);
   }
-  if (path === "/api/auth/google/callback") {
-    return service.handleGoogleCallback(request);
-  }
   if (path === "/api/auth/google/start") {
     return service.handleGoogleStart(request);
-  }
-  if (path === "/api/auth/github/callback") {
-    return service.handleGitHubCallback(request);
   }
   if (path === "/api/auth/github/start") {
     return service.handleGitHubStart(request);
@@ -71,6 +59,9 @@ export async function handleHostedAuthRequest(
   }
   if (path === "/api/auth/session") {
     return service.handleSession(request);
+  }
+  if (path.startsWith("/api/auth/")) {
+    return service.handleAuthRequest(request);
   }
 
   return new Response("Not found", { status: 404 });

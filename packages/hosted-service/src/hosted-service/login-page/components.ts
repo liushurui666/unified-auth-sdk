@@ -62,14 +62,6 @@ export function renderProviderList(providers: LoginProviderView[], primaryProvid
     </section>`;
 }
 
-export function renderDevLogin(allowDevLogin: boolean, href: string, label = "使用开发账号进入") {
-  if (!allowDevLogin) {
-    return "";
-  }
-
-  return `<a class="dev-link" href="${escapeHtml(href)}">${escapeHtml(label)}</a>`;
-}
-
 export function renderFooter(clientId: string, footerText?: string) {
   if (footerText === "") {
     return "";

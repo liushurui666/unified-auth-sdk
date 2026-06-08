@@ -1,6 +1,13 @@
-import type { HostedAuthStore } from "./store/index.js";
+import type { UnifiedAuthConfig } from "../config.js";
 
 export type HostedAuthLoginProviderId = "feishu" | "github" | "google";
+export type HostedBetterAuthProviderId = HostedAuthLoginProviderId | (string & {});
+
+export interface HostedAuthBetterAuthProviderConfig {
+  enabled?: boolean;
+  providerId?: HostedBetterAuthProviderId;
+  scopes?: string[];
+}
 
 export interface HostedAuthLoginProviderView {
   enabled: boolean;
@@ -12,10 +19,8 @@ export interface HostedAuthLoginProviderView {
 }
 
 export interface HostedAuthLoginPageModel {
-  allowDevLogin: boolean;
   appName: string;
   clientId: string;
-  devLoginHref: string;
   error?: string;
   providers: HostedAuthLoginProviderView[];
   redirectURI: string;
@@ -32,31 +37,32 @@ export type HostedAuthLoginPageComponent = ((props: HostedAuthLoginPageProps) =>
 
 export interface HostedAuthApplication {
   allowedRedirectURIs?: string[];
-  appearance?: HostedAuthAppearance;
   clientId: string;
-  loginPage?: HostedAuthLoginPageConfig;
   loginPageComponent?: HostedAuthLoginPageComponent;
   name?: string;
   redirectURI?: string;
 }
 
+export interface HostedAuthRuntimeEnv {
+  AUTH_ALLOWED_REDIRECT_URI?: string;
+  AUTH_CLIENT_ID?: string;
+  AUTH_CLIENT_NAME?: string;
+  AUTH_SERVICE_URL?: string;
+  BETTER_AUTH_URL?: string;
+}
+
 export interface HostedAuthSingleApplicationOptions {
   allowedRedirectURIs?: string[];
   appName?: string;
-  clientId: string;
+  clientId?: string;
   redirectURI?: string;
   siteURL?: string;
-}
-
-export interface HostedAuthAppearance {
-  backgroundImageUrl?: string;
 }
 
 export interface HostedAuthLoginPageConfig {
   backgroundImageUrl?: string;
   brandLabel?: string;
   brandName?: string;
-  devLoginLabel?: string;
   footerText?: string;
   heroDescription?: string;
   heroKicker?: string;
@@ -70,50 +76,32 @@ export interface HostedAuthLoginPageConfig {
   statusText?: string;
 }
 
-export interface HostedFeishuConfig {
-  appId?: string;
-  appSecret?: string;
-  redirectURI?: string;
+export interface HostedBetterAuthSessionResult {
+  session: {
+    expiresAt?: Date | string | null;
+    id?: string | null;
+    token?: string | null;
+    userId?: string | null;
+  };
+  user: {
+    email?: string | null;
+    emailVerified?: boolean;
+    id: string;
+    image?: string | null;
+    name?: string | null;
+    [key: string]: unknown;
+  };
 }
 
-export interface HostedGoogleConfig {
-  clientId?: string;
-  clientSecret?: string;
-  redirectURI?: string;
-  scopes?: string[];
-}
-
-export interface HostedGitHubConfig {
-  clientId?: string;
-  clientSecret?: string;
-  redirectURI?: string;
-  scopes?: string[];
+export interface HostedBetterAuthServer {
+  handler(request: Request): Promise<Response> | Response;
 }
 
 export interface HostedAuthServiceOptions extends HostedAuthSingleApplicationOptions {
-  allowDevLogin?: boolean;
-  appearance?: HostedAuthAppearance;
+  auth: HostedBetterAuthServer;
   authBaseURL?: string;
-  cookieDomain?: string;
-  cookieName?: string;
-  feishu?: HostedFeishuConfig;
-  github?: HostedGitHubConfig;
-  google?: HostedGoogleConfig;
-  loginPage?: HostedAuthLoginPageConfig;
+  authProviders?: Partial<Record<HostedAuthLoginProviderId, HostedAuthBetterAuthProviderConfig>>;
+  config?: UnifiedAuthConfig;
+  env?: HostedAuthRuntimeEnv;
   loginPageComponent?: HostedAuthLoginPageComponent;
-  sessionSecret: string;
-  store?: HostedAuthStore;
 }
-
-export type SessionPayload = {
-  clientId: string;
-  exp: number;
-  sessionId: string;
-};
-
-export type StatePayload = {
-  clientId: string;
-  exp: number;
-  redirectURI: string;
-  state: string;
-};

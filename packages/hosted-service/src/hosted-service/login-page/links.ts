@@ -27,15 +27,6 @@ const providerDefinitions: Record<LoginProviderId, {
   },
 };
 
-function createDevLoginUrl(params: RenderLoginPageParams) {
-  const devUrl = new URL("/api/auth/dev-login", params.authBaseURL);
-
-  devUrl.searchParams.set("client_id", params.clientId);
-  devUrl.searchParams.set("redirect_uri", params.redirectURI);
-
-  return devUrl.toString();
-}
-
 function createProvider(params: {
   authBaseURL: string;
   clientId: string;
@@ -61,9 +52,7 @@ function createProvider(params: {
 }
 
 function getProviderEnabled(params: RenderLoginPageParams, provider: LoginProviderId) {
-  if (provider === "feishu") return params.feishuEnabled;
-  if (provider === "github") return params.githubEnabled;
-  return params.googleEnabled;
+  return params.enabledProviders.includes(provider);
 }
 
 function getProviderOrder(providers?: LoginProviderId[]) {
@@ -77,7 +66,6 @@ export function createLoginPageLinks(
   loginPage?: HostedAuthLoginPageConfig,
 ): LoginPageLinks {
   return {
-    devLogin: createDevLoginUrl(params),
     providers: getProviderOrder(loginPage?.providers).map((provider) => createProvider({
       ...params,
       enabled: getProviderEnabled(params, provider),
